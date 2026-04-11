@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MeetHalf</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1a18;
+    --paper: #f5f2ea;
+    --muted: #7a7870;
+    --accent: #c84a1e;
+    --accent2: #2a6b4f;
+    --border: rgba(26,26,24,0.12);
+    --card: #ffffff;
+    --mono: 'DM Mono', monospace;
+    --serif: 'Fraunces', serif;
+  }
+
+  body {
+    font-family: var(--mono);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ─── HEADER ─────────────────────────────────────────────── */
+  header {
+    padding: 1.2rem 2rem 1rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--serif);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .logo span { color: var(--accent); font-style: italic; }
+
+  .session-badge {
+    font-size: 11px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3px 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: none;
+  }
+
+  /* ─── LAYOUT ─────────────────────────────────────────────── */
+  .main { flex: 1; display: flex; gap: 0; }
+
+  .sidebar {
+    width: 340px;
+    min-width: 340px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    max-height: calc(100vh - 65px);
+  }
+
+  .map-area { flex: 1; position: relative; }
+
+  #map { width: 100%; height: 100%; min-height: 500px; }
+
+  /* ─── PANELS ─────────────────────────────────────────────── */
+  .panel {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-title {
+    font-family: var(--serif);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.85rem;
+    letter-spacing: -0.01em;
+  }
+  .panel-title .num {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--accent);
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 2px;
+  }
+
+  /* ─── FORMS ──────────────────────────────────────────────── */
+  input[type="text"], input[type="number"], select, textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+    border-radius: 0;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus { border-color: var(--ink); }
+
+  .form-group { margin-bottom: 12px; }
+  .form-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  /* ─── BUTTONS ────────────────────────────────────────────── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--ink);
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    border-radius: 0;
+  }
+  .btn:hover { background: var(--ink); color: var(--paper); }
+  .btn.primary { background: var(--ink); color: var(--paper); }
+  .btn.primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn.accent { background: var(--accent); color: white; border-color: var(--accent); }
+  .btn.accent:hover { background: var(--ink); border-color: var(--ink); }
+  .btn.green { background: var(--accent2); color: white; border-color: var(--accent2); }
+  .btn.green:hover { background: var(--ink); border-color: var(--ink); }
+  .btn.sm { padding: 5px 10px; font-size: 11px; }
+  .btn.full { width: 100%; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn:disabled:hover { background: transparent; color: var(--ink); border-color: var(--ink); }
+  .btn.primary:disabled:hover { background: var(--ink); color: var(--paper); }
+  .btn.accent:disabled:hover { background: var(--accent); color: white; }
+
+  /* ─── SESSION CODE ───────────────────────────────────────── */
+  .code-display {
+    font-family: var(--mono);
+    font-size: 2rem;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-align: center;
+    padding: 1rem 0;
+    border: 1px dashed var(--border);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .code-display:hover { border-color: var(--accent); }
+  .code-display .copy-hint {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+    display: block;
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  /* ─── PARTICIPANTS ───────────────────────────────────────── */
+  .user-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .user-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+  }
+
+  .user-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+    flex-shrink: 0;
+  }
+  .user-dot.located { background: var(--accent2); }
+  .user-dot.me { background: var(--accent); }
+
+  .user-name { flex: 1; font-size: 12px; font-weight: 500; }
+  .user-loc { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+  /* ─── FILTERS ────────────────────────────────────────────── */
+  .filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .filter-tag {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--ink);
+  }
+  .filter-tag:hover { border-color: var(--ink); }
+  .filter-tag.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .filter-tag .icon { font-size: 14px; }
+
+  /* ─── PLACE CARDS ────────────────────────────────────────── */
+  .place-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .place-card {
+    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    position: relative;
+  }
+  .place-card:hover { border-color: var(--ink); }
+  .place-card.voted { border-color: var(--accent); }
+  .place-card.winner { border-color: var(--accent2); background: #f0faf5; }
+
+  .place-name { font-family: var(--serif); font-size: 0.9rem; font-weight: 600; margin-bottom: 2px; }
+  .place-meta { font-size: 11px; color: var(--muted); }
+  .place-dist { font-size: 10px; color: var(--accent); font-weight: 500; margin-top: 4px; }
+
+  .vote-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    gap: 8px;
+  }
+  .vote-bar-wrap { flex: 1; height: 3px; background: var(--border); }
+  .vote-bar { height: 100%; background: var(--accent2); transition: width 0.3s; }
+  .vote-count { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  .winner-crown {
+    position: absolute;
+    top: -1px;
+    right: 10px;
+    background: var(--accent2);
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-family: var(--mono);
+  }
+
+  /* ─── SCREENS ────────────────────────────────────────────── */
+  .screen { display: none; flex-direction: column; flex: 1; }
+  .screen.active { display: flex; }
+  .welcome-screen { flex-direction: row; align-items: stretch; }
+
+  .welcome-left {
+    flex: 1;
+    padding: 4rem 3rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .welcome-right {
+    width: 340px;
+    border-left: 1px solid var(--border);
+    padding: 3.5rem 2.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .hero-title {
+    font-family: var(--serif);
+    font-size: 3.5rem;
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 1rem;
+  }
+  .hero-title em { font-style: italic; color: var(--accent); }
+
+  .hero-sub {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 380px;
+    line-height: 1.7;
+    margin-bottom: 2rem;
+  }
+
+  .tagline-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+
+  /* ─── DIVIDER ────────────────────────────────────────────── */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 1rem 0;
+  }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .divider span {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  /* ─── TOAST ──────────────────────────────────────────────── */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 20px;
+    font-size: 12px;
+    transition: transform 0.25s;
+    z-index: 9999;
+    pointer-events: none;
+    white-space: nowrap;
+    font-family: var(--mono);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ─── STATUS BAR ─────────────────────────────────────────── */
+  .status-bar {
+    padding: 7px 1.5rem;
+    background: var(--paper);
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .pulse {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent2);
+    animation: pulse 2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  /* ─── MAP LOADING ────────────────────────────────────────── */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(245,242,234,0.85);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    gap: 10px;
+  }
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ─── EMPTY STATE ────────────────────────────────────────── */
+  .empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.8;
+    border: 1px dashed var(--border);
+  }
+
+  /* ─── ADDRESS ROW ────────────────────────────────────────── */
+  .addr-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .addr-row input { flex: 1; }
+
+  /* ─── AUTOCOMPLETE ───────────────────────────────────────── */
+  .suggestion-list {
+    border: 1px solid var(--border);
+    background: var(--card);
+    max-height: 160px;
+    overflow-y: auto;
+    display: none;
+    position: absolute;
+    z-index: 500;
+    width: calc(100% - 3rem);
+    left: 1.5rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  .suggestion-item {
+    padding: 7px 12px;
+    font-size: 11px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.4;
+    font-family: var(--mono);
+    color: var(--ink);
+  }
+  .suggestion-item:hover { background: var(--paper); }
+  .suggestion-item:last-child { border-bottom: none; }
+
+  /* ─── JOIN CODE INPUT ────────────────────────────────────── */
+  #join-code-input {
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-size: 1rem;
+    text-align: center;
+    padding: 12px;
+  }
+
+  /* ─── RESPONSIVE ─────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    .welcome-screen { flex-direction: column; }
+    .welcome-right { width: 100%; border-left: none; border-top: 1px solid var(--border); padding: 2rem 1.5rem; }
+    .welcome-left { padding: 2.5rem 1.5rem; }
+    .hero-title { font-size: 2.5rem; }
+    .main { flex-direction: column; }
+    .sidebar { width: 100%; min-width: unset; max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
+    #map { min-height: 350px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  WELCOME SCREEN                                         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="screen active welcome-screen" id="screen-welcome">
+    <div class="welcome-left">
+      <h1 class="hero-title">Meet<em>Half</em><br/>way.</h1>
+      <p class="hero-sub">
+        Find the perfect spot between you and your friends.
+        No accounts, no tracking, no faff — just a six-character code.
+      </p>
+      <div class="tagline-pills">
+        <span class="pill">Free forever</span>
+        <span class="pill">No account needed</span>
+        <span class="pill">Real-time sync</span>
+        <span class="pill">Open map data</span>
+      </div>
+    </div>
+    <div class="welcome-right">
+      <div>
+        <label class="form-label">Your name</label>
+        <input type="text" id="user-name-input" placeholder="e.g. Sophie" maxlength="20" />
+      </div>
+
+      <div>
+        <button class="btn primary full" onclick="createSession()">Create new session</button>
+
+        <div class="divider"><span>or join existing</span></div>
+
+        <div class="form-group">
+          <label class="form-label">Session code</label>
+          <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter') joinSession()" />
+        </div>
+        <button class="btn full" onclick="joinSession()">Join session →</button>
+      </div>
+
+      <p style="font-size:10px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);padding-top:1rem;">
+        Your location is never required — type an address or share GPS, your call.
+        Sessions sync automatically every 3 seconds via shared storage.
+      </p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!--  SESSION SCREEN                                         -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="screen" id="screen-session">
+
+    <header>
+      <span class="logo">Meet<span>Half</span></span>
+      <span class="session-badge" id="header-code-badge"></span>
+      <div style="flex:1;"></div>
+      <button class="btn sm" onclick="leaveSession()">Leave session</button>
+    </header>
+
+    <div class="main">
+
+      <!-- ─── SIDEBAR ───────────────────────────────────── -->
+      <div class="sidebar">
+
+        <!-- 0 · Session Code -->
+        <div class="panel">
+          <div class="panel-title">
+            <span class="num">Session code</span>
+            Share with friends
+          </div>
+          <div class="code-display" id="code-display" onclick="copyCode()" title="Click to copy">
+            ——
+            <span class="copy-hint">Click to copy</span>
+          </div>
+          <div style="margin-top:10px;font-size:11px;color:var(--muted);">
+            <span id="online-count">0 users</span> connected
+          </div>
+        </div>
+
+        <!-- 1 · Your location -->
+        <div class="panel" style="position:relative;">
+          <div class="panel-title">
+            <span class="num">Step 1</span>
+            Your location
+          </div>
+
+          <div class="addr-row">
+            <input type="text" id="addr-input" placeholder="Type an address…"
+              autocomplete="off"
+              oninput="onAddrInput(this.value)"
+              onfocus="showSuggestions()"
+              onkeydown="if(event.key==='Enter') geocodeAddress()" />
+            <button class="btn sm" onclick="geocodeAddress()" title="Search">→</button>
+          </div>
+
+          <!-- Autocomplete dropdown -->
+          <div class="suggestion-list" id="suggestion-list"></div>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button class="btn sm" onclick="useGPS()">
+              <!-- GPS icon -->
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <circle cx="8" cy="8" r="3"/>
+                <line x1="8" y1="1" x2="8" y2="4"/>
+                <line x1="8" y1="12" x2="8" y2="15"/>
+                <line x1="1" y1="8" x2="4" y2="8"/>
+                <line x1="12" y1="8" x2="15" y2="8"/>
+              </svg>
+              Use GPS
+            </button>
+            <button class="btn sm accent" id="confirm-loc-btn"
+              onclick="setMyLocation()" disabled>
+              Confirm location
+            </button>
+          </div>
+
+          <div id="loc-status" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>
+        </div>
+
+        <!-- 2 · Participants -->
+        <div class="panel">
+          <div class="panel-title">
+            <span class="num">Step 2</span>
+            Participants
+          </div>
+          <div class="user-list" id="user-list">
+            <div class="empty-state">Waiting for participants…</div>
+          </div>
+        </div>
+
+        <!-- 3 · Find places -->
+        <div class="panel">
+          <div class="panel-title">
+            <span class="num">Step 3</span>
+            Find places
+          </div>
+          <div class="filters-row" id="filters-row"></div>
+          <button class="btn primary full" id="search-btn"
+            onclick="searchPlaces()" disabled>
+            Find midpoint places
+          </button>
+        </div>
+
+        <!-- 4 · Vote -->
+        <div class="panel" style="flex:1;" id="results-panel">
+          <div class="panel-title">
+            <span class="num">Step 4</span>
+            Vote for a place
+          </div>
+          <div id="place-list" class="place-list">
+            <div class="empty-state">Search for places to see results here.</div>
+          </div>
+        </div>
+
+      </div><!-- /sidebar -->
+
+      <!-- ─── MAP ───────────────────────────────────────── -->
+      <div class="map-area">
+        <div id="map"></div>
+        <div class="loading-overlay" id="map-loading">
+          <div class="spinner"></div>
+          Searching the neighbourhood…
+        </div>
+      </div>
+
+    </div><!-- /main -->
+
+    <div class="status-bar">
+      <div class="pulse" id="pulse-dot"></div>
+      <span id="status-text">Connecting…</span>
+    </div>
+
+  </div><!-- /screen-session -->
+
+</div><!-- /app -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════════════════ -->
+<!--  JAVASCRIPT                                                -->
+<!-- ═══════════════════════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────────────────────
+//  CONFIGURATION
+//  Add or modify categories here — the rest of the app adapts.
+//  osmKey: the OSM tag key  ("amenity", "leisure", "tourism"…)
+//  query:  pipe-separated OSM tag values to match
+// ─────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { id: 'food',    label: 'Food',    icon: '🍽', query: 'restaurant|fast_food|bakery',       osmKey: 'amenity' },
+  { id: 'cafe',    label: 'Café',    icon: '☕', query: 'cafe',                               osmKey: 'amenity' },
+  { id: 'drink',   label: 'Drink',   icon: '🍺', query: 'bar|pub|biergarten',                osmKey: 'amenity' },
+  { id: 'gym',     label: 'Gym',     icon: '🏋', query: 'fitness_centre|sports_centre',      osmKey: 'leisure' },
+  { id: 'park',    label: 'Park',    icon: '🌿', query: 'park',                              osmKey: 'leisure' },
+  { id: 'culture', label: 'Culture', icon: '🎭', query: 'theatre|cinema|museum',             osmKey: 'amenity' },
+  // ↓ Add more categories below — just copy the pattern above.
+  // { id: 'hotel',   label: 'Hotel',   icon: '🏨', query: 'hotel|hostel',                  osmKey: 'tourism' },
+];
+
+// Overpass search radius in metres around the midpoint
+const SEARCH_RADIUS = 1500;
+
+// Max places to display from Overpass results
+const MAX_PLACES = 20;
+
+// Sync interval (ms) — lower = more responsive, higher = fewer API calls
+const SYNC_INTERVAL = 3000;
+
+// ─────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────
+let sessionId    = null;
+let myUserId     = null;
+let myName       = '';
+let myCoords     = null;   // { lat, lng, label }
+let pendingCoords = null;  // staged coords before user confirms
+let map          = null;
+let userMarkers  = {};
+let midpointMarker = null;
+let placeMarkers = [];
+let activeFilters = new Set(['food']);
+let pollInterval = null;
+let addrDebounce = null;
+let sessionData  = null;   // latest snapshot from storage
+let lastVotedPlace = null; // placeId the current user voted for
+
+// ─────────────────────────────────────────────────────────────
+//  STORAGE SHIM
+//  Swaps window.storage (claude.ai) for localStorage (local dev)
+// ─────────────────────────────────────────────────────────────
+const store = (() => {
+  // Use window.storage if available (claude.ai environment)
+  if (typeof window !== 'undefined' && window.storage) {
+    return window.storage;
+  }
+  // Fall back to localStorage for local development
+  return {
+    _prefix: 'meethalf_',
+    async set(key, value, shared) {
+      localStorage.setItem(this._prefix + key, value);
+      return { key, value, shared };
+    },
+    async get(key, shared) {
+      const value = localStorage.getItem(this._prefix + key);
+      if (value === null) throw new Error('Key not found: ' + key);
+      return { key, value, shared };
+    },
+    async delete(key, shared) {
+      localStorage.removeItem(this._prefix + key);
+      return { key, deleted: true, shared };
+    },
+    async list(prefix, shared) {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(this._prefix + prefix)) {
+          keys.push(k.slice(this._prefix.length));
+        }
+      }
+      return { keys, prefix, shared };
+    }
+  };
+})();
+
+// ─────────────────────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────────────────────
+function genCode()   { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
+function genUserId() { return 'u_' + Math.random().toString(36).substring(2, 10); }
+
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// Haversine distance in metres between two lat/lng points
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Spherical midpoint from array of { lat, lng } objects
+function calcMidpoint(coords) {
+  let x = 0, y = 0, z = 0;
+  coords.forEach(c => {
+    const lat = c.lat * Math.PI / 180;
+    const lng = c.lng * Math.PI / 180;
+    x += Math.cos(lat) * Math.cos(lng);
+    y += Math.cos(lat) * Math.sin(lng);
+    z += Math.sin(lat);
+  });
+  x /= coords.length; y /= coords.length; z /= coords.length;
+  const lng = Math.atan2(y, x) * 180 / Math.PI;
+  const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) * 180 / Math.PI;
+  return { lat, lng };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MAP INIT
+// ─────────────────────────────────────────────────────────────
+function initMap(center = [48.8566, 2.3522]) {
+  if (map) return;
+  map = L.map('map', { zoomControl: true }).setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SESSION LIFECYCLE
+// ─────────────────────────────────────────────────────────────
+function createSession() {
+  const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
+  myName   = name;
+  myUserId = genUserId();
+  sessionId = genCode();
+  initSessionScreen();
+}
+
+function joinSession() {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
+  if (!code || code.length < 4) { showToast('Enter a valid session code'); return; }
+  myName    = name;
+  myUserId  = genUserId();
+  sessionId = code;
+  initSessionScreen();
+}
+
+async function initSessionScreen() {
+  // Switch screens
+  document.getElementById('screen-welcome').classList.remove('active');
+  document.getElementById('screen-session').classList.add('active');
+
+  // Update header
+  document.getElementById('code-display').innerHTML =
+    sessionId + '<span class="copy-hint">Click to copy</span>';
+  const badge = document.getElementById('header-code-badge');
+  badge.textContent = 'Session — ' + sessionId;
+  badge.style.display = 'inline';
+
+  buildFilters();
+  initMap();
+
+  // Register this user and start syncing
+  await pushMyUser();
+  await syncSession();
+  pollInterval = setInterval(syncSession, SYNC_INTERVAL);
+}
+
+function leaveSession() {
+  clearInterval(pollInterval);
+
+  // Reset all state
+  sessionId     = null;
+  myCoords      = null;
+  pendingCoords = null;
+  lastVotedPlace = null;
+  sessionData   = null;
+
+  // Destroy map
+  if (map) { map.remove(); map = null; }
+  Object.values(userMarkers).forEach(m => m.remove());
+  userMarkers = {};
+  placeMarkers.forEach(m => m.remove());
+  placeMarkers = [];
+  if (midpointMarker) { midpointMarker.remove(); midpointMarker = null; }
+
+  // Reset UI
+  document.getElementById('screen-session').classList.remove('active');
+  document.getElementById('screen-welcome').classList.add('active');
+  document.getElementById('addr-input').value = '';
+  document.getElementById('loc-status').textContent = '';
+  document.getElementById('place-list').innerHTML =
+    '<div class="empty-state">Search for places to see results here.</div>';
+  document.getElementById('user-list').innerHTML =
+    '<div class="empty-state">Waiting for participants…</div>';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  STORAGE — push / pull
+// ─────────────────────────────────────────────────────────────
+async function pushMyUser() {
+  if (!sessionId || !myUserId) return;
+  try {
+    await store.set(
+      `mh_session_${sessionId}_user_${myUserId}`,
+      JSON.stringify({ id: myUserId, name: myName, coords: myCoords, ts: Date.now() }),
+      true
+    );
+  } catch (e) { console.warn('pushMyUser failed', e); }
+}
+
+async function syncSession() {
+  if (!sessionId) return;
+  try {
+    const prefix = `mh_session_${sessionId}_`;
+    const keysResult = await store.list(prefix, true);
+    if (!keysResult) return;
+
+    const users  = [];
+    let places   = null;
+    const votes  = {};
+
+    for (const key of (keysResult.keys || [])) {
+      try {
+        const r = await store.get(key, true);
+        if (!r) continue;
+        const val = JSON.parse(r.value);
+
+        if (key.includes('_user_')) {
+          // Only keep users active in last 30 s
+          if (Date.now() - val.ts < 30000) users.push(val);
+        } else if (key.endsWith('_places')) {
+          places = val;
+        } else if (key.includes('_vote_')) {
+          votes[val.placeId] = (votes[val.placeId] || 0) + 1;
+        }
+      } catch (_) { /* skip malformed entries */ }
+    }
+
+    sessionData = { users, places, votes };
+
+    renderUsers(users);
+    if (places) renderPlaces(places, votes);
+    updateMapMarkers(users);
+    updateSearchBtn(users);
+
+    const count = users.length;
+    document.getElementById('online-count').textContent =
+      count + ' user' + (count !== 1 ? 's' : '');
+    document.getElementById('status-text').textContent =
+      `Last synced ${new Date().toLocaleTimeString()} · ${count} participant${count !== 1 ? 's' : ''}`;
+
+  } catch (e) {
+    document.getElementById('status-text').textContent = 'Sync error — retrying…';
+    console.warn('syncSession failed', e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UI RENDERING
+// ─────────────────────────────────────────────────────────────
+function renderUsers(users) {
+  const list = document.getElementById('user-list');
+  if (!users.length) {
+    list.innerHTML = '<div class="empty-state">Waiting for participants…</div>';
+    return;
+  }
+  list.innerHTML = '';
+  users.forEach(u => {
+    const isMe = u.id === myUserId;
+    const div  = document.createElement('div');
+    div.className = 'user-item';
+    div.innerHTML = `
+      <div class="user-dot ${u.coords ? 'located' : ''} ${isMe ? 'me' : ''}"></div>
+      <div>
+        <div class="user-name">${escapeHtml(u.name)}${isMe ? ' <span style="color:var(--muted);font-weight:400;">(you)</span>' : ''}</div>
+        <div class="user-loc">${u.coords ? '📍 ' + escapeHtml(u.coords.label || 'Located') : 'No location set'}</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function updateSearchBtn(users) {
+  const located = users.filter(u => u.coords).length;
+  const btn = document.getElementById('search-btn');
+  btn.disabled = located < 2;
+  if (located < 2) {
+    const needed = 2 - located;
+    btn.textContent = `Need ${needed} more location${needed !== 1 ? 's' : ''} to search`;
+  } else {
+    btn.textContent = `Find midpoint places (${located} locations)`;
+  }
+}
+
+function buildFilters() {
+  const row = document.getElementById('filters-row');
+  row.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const tag = document.createElement('div');
+    tag.className = 'filter-tag' + (activeFilters.has(cat.id) ? ' active' : '');
+    tag.dataset.id = cat.id;
+    tag.innerHTML = `<span class="icon">${cat.icon}</span>${cat.label}`;
+    tag.addEventListener('click', () => {
+      if (activeFilters.has(cat.id)) {
+        activeFilters.delete(cat.id);
+        tag.classList.remove('active');
+      } else {
+        activeFilters.add(cat.id);
+        tag.classList.add('active');
+      }
+    });
+    row.appendChild(tag);
+  });
+}
+
+function renderPlaces(places, votes) {
+  const list = document.getElementById('place-list');
+  if (!places || !places.length) {
+    list.innerHTML = '<div class="empty-state">No places found. Try different filters or a wider search.</div>';
+    return;
+  }
+
+  const maxVotes = Math.max(1, ...Object.values(votes));
+  const sorted   = [...places].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0));
+
+  list.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const v        = votes[p.id] || 0;
+    const isWinner = i === 0 && v > 0;
+    const hasVoted = lastVotedPlace === p.id;
+    const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
+    const pct      = v ? Math.round((v / maxVotes) * 100) : 0;
+
+    const card = document.createElement('div');
+    card.className = 'place-card' + (hasVoted ? ' voted' : '') + (isWinner ? ' winner' : '');
+    card.innerHTML = `
+      ${isWinner ? '<span class="winner-crown">Top pick</span>' : ''}
+      <div class="place-name">${p.catIcon} ${escapeHtml(p.name)}</div>
+      <div class="place-meta">${escapeHtml(p.type.replace(/_/g, ' '))}${p.addr ? ' · ' + escapeHtml(p.addr) : ''}</div>
+      <div class="place-dist">${distStr} from midpoint</div>
+      <div class="vote-row">
+        <button class="btn sm ${hasVoted ? 'primary' : ''}" data-id="${p.id}" onclick="vote('${p.id}')">
+          ${hasVoted ? '✓ Voted' : 'Vote'}
+        </button>
+        <div class="vote-bar-wrap">
+          <div class="vote-bar" style="width:${pct}%"></div>
+        </div>
+        <span class="vote-count">${v} vote${v !== 1 ? 's' : ''}</span>
+      </div>
+    `;
+    // Click card to fly to location on map
+    card.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      map.setView([p.lat, p.lng], 17);
+    });
+    list.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MAP MARKERS
+// ─────────────────────────────────────────────────────────────
+function updateMapMarkers(users) {
+  // Clear existing user markers
+  Object.values(userMarkers).forEach(m => m.remove());
+  userMarkers = {};
+
+  const located = users.filter(u => u.coords);
+
+  located.forEach(u => {
+    const isMe = u.id === myUserId;
+    const color = isMe ? '#c84a1e' : '#2a6b4f';
+    const initial = u.name[0].toUpperCase();
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:32px;height:32px;border-radius:50%;
+        background:${color};border:2px solid white;
+        display:flex;align-items:center;justify-content:center;
+        font-size:12px;font-weight:500;color:white;
+        font-family:'DM Mono',monospace;
+        box-shadow:0 2px 6px rgba(0,0,0,0.25);
+      ">${initial}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    userMarkers[u.id] = L.marker([u.coords.lat, u.coords.lng], { icon })
+      .addTo(map)
+      .bindTooltip(u.name, { permanent: false });
+  });
+
+  // Draw/update midpoint marker
+  if (located.length >= 2) {
+    const mid = calcMidpoint(located.map(u => u.coords));
+    if (midpointMarker) midpointMarker.remove();
+    const mIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:14px;height:14px;background:#c84a1e;
+        transform:rotate(45deg);border:2px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    midpointMarker = L.marker([mid.lat, mid.lng], { icon: mIcon })
+      .addTo(map)
+      .bindTooltip('Midpoint', { permanent: true });
+
+    const bounds = L.latLngBounds(located.map(u => [u.coords.lat, u.coords.lng]));
+    map.fitBounds(bounds, { padding: [60, 60] });
+  }
+}
+
+function addPlaceMarkersToMap(places, mid) {
+  placeMarkers.forEach(m => m.remove());
+  placeMarkers = [];
+
+  places.forEach(p => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:28px;height:28px;border-radius:50%;
+        background:#f5f2ea;border:1.5px solid #1a1a18;
+        display:flex;align-items:center;justify-content:center;
+        font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.12);
+      ">${p.catIcon}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    const distStr = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
+    const m = L.marker([p.lat, p.lng], { icon })
+      .addTo(map)
+      .bindPopup(`
+        <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
+        <small style="font-family:DM Mono,monospace;color:#7a7870;">
+          ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
+        </small>
+        ${p.url ? `<br><a href="${p.url}" target="_blank" style="font-size:11px;">Website →</a>` : ''}
+      `);
+    placeMarkers.push(m);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LOCATION — GPS & GEOCODING
+// ─────────────────────────────────────────────────────────────
+function useGPS() {
+  if (!navigator.geolocation) {
+    showToast('GPS not available in this browser');
+    return;
+  }
+  document.getElementById('loc-status').textContent = 'Acquiring GPS…';
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const label = await reverseGeocode(lat, lng);
+      pendingCoords = { lat, lng, label };
+      document.getElementById('addr-input').value = label;
+      document.getElementById('confirm-loc-btn').disabled = false;
+      document.getElementById('loc-status').textContent = `📍 ${label}`;
+    },
+    err => {
+      document.getElementById('loc-status').textContent =
+        'GPS denied or unavailable — type an address instead.';
+    },
+    { timeout: 10000, enableHighAccuracy: false }
+  );
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
+    );
+    const d = await r.json();
+    return d.display_name
+      ? d.display_name.split(',').slice(0, 3).join(', ')
+      : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch {
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
+}
+
+function onAddrInput(val) {
+  clearTimeout(addrDebounce);
+  if (val.length < 3) {
+    document.getElementById('suggestion-list').style.display = 'none';
+    return;
+  }
+  addrDebounce = setTimeout(() => fetchSuggestions(val), 400);
+}
+
+function showSuggestions() {
+  const val = document.getElementById('addr-input').value;
+  if (val.length >= 3) fetchSuggestions(val);
+}
+
+async function geocodeAddress() {
+  const q = document.getElementById('addr-input').value.trim();
+  if (q.length >= 2) fetchSuggestions(q);
+}
+
+async function fetchSuggestions(q) {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
+    );
+    const results = await r.json();
+    const list = document.getElementById('suggestion-list');
+
+    if (!results.length) { list.style.display = 'none'; return; }
+
+    list.innerHTML = '';
+    results.forEach(res => {
+      const label = res.display_name.split(',').slice(0, 4).join(', ');
+      const item  = document.createElement('div');
+      item.className = 'suggestion-item';
+      item.textContent = label;
+      item.addEventListener('click', () => {
+        document.getElementById('addr-input').value = label;
+        pendingCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lon), label };
+        document.getElementById('confirm-loc-btn').disabled = false;
+        document.getElementById('loc-status').textContent = `📍 ${label}`;
+        list.style.display = 'none';
+      });
+      list.appendChild(item);
+    });
+    list.style.display = 'block';
+  } catch (e) {
+    console.warn('fetchSuggestions failed', e);
+  }
+}
+
+async function setMyLocation() {
+  if (!pendingCoords) return;
+  myCoords = pendingCoords;
+  document.getElementById('loc-status').textContent = `✓ Set: ${myCoords.label}`;
+  document.getElementById('confirm-loc-btn').disabled = true;
+  await pushMyUser();
+  await syncSession();
+  showToast('Location saved!');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  OVERPASS PLACE SEARCH
+// ─────────────────────────────────────────────────────────────
+async function searchPlaces() {
+  if (!sessionData) return;
+  const located = sessionData.users.filter(u => u.coords);
+  if (located.length < 2) return;
+
+  const mid = calcMidpoint(located.map(u => u.coords));
+
+  const selectedCats = CATEGORIES.filter(c => activeFilters.has(c.id));
+  if (!selectedCats.length) {
+    showToast('Select at least one category first');
+    return;
+  }
+
+  const loadingEl = document.getElementById('map-loading');
+  loadingEl.style.display = 'flex';
+
+  // Build Overpass QL query — one node clause per category
+  const nodeClauses = selectedCats.map(cat =>
+    `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
+  ).join('\n');
+
+  const overpassQuery = `[out:json][timeout:20];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
+
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(overpassQuery)
+    });
+    const data = await r.json();
+
+    const places = (data.elements || [])
+      .filter(el => el.tags && el.tags.name)
+      .map(el => {
+        const dist = Math.round(haversine(mid.lat, mid.lng, el.lat, el.lon));
+        // Find which category matched this element
+        const cat = selectedCats.find(c => {
+          const vals = c.query.split('|');
+          return vals.some(v => el.tags[c.osmKey] === v);
+        });
+        return {
+          id:      el.id.toString(),
+          name:    el.tags.name,
+          type:    el.tags.amenity || el.tags.leisure || el.tags.tourism || '',
+          lat:     el.lat,
+          lng:     el.lon,
+          dist,
+          cat:     cat ? cat.id   : 'other',
+          catIcon: cat ? cat.icon : '📍',
+          addr:    [el.tags['addr:street'], el.tags['addr:housenumber']].filter(Boolean).join(' '),
+          url:     el.tags.website || el.tags['contact:website'] || '',
+        };
+      })
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, MAX_PLACES);
+
+    // Persist results so all session members see them
+    await store.set(`mh_session_${sessionId}_places`, JSON.stringify(places), true);
+
+    renderPlaces(places, sessionData?.votes || {});
+    addPlaceMarkersToMap(places, mid);
+    showToast(`Found ${places.length} place${places.length !== 1 ? 's' : ''} near the midpoint`);
+  } catch (e) {
+    showToast('Could not fetch places — check connection and retry');
+    console.error('searchPlaces failed', e);
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  VOTING
+// ─────────────────────────────────────────────────────────────
+async function vote(placeId) {
+  // Remove previous vote first
+  if (lastVotedPlace) {
+    try {
+      await store.delete(`mh_session_${sessionId}_vote_${myUserId}`, true);
+    } catch (_) {}
+  }
+
+  lastVotedPlace = placeId;
+
+  try {
+    await store.set(
+      `mh_session_${sessionId}_vote_${myUserId}`,
+      JSON.stringify({ placeId, userId: myUserId, ts: Date.now() }),
+      true
+    );
+    await syncSession();
+    showToast('Vote cast!');
+  } catch (e) {
+    showToast('Vote failed — try again');
+    console.error('vote failed', e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────────────────────
+function copyCode() {
+  navigator.clipboard.writeText(sessionId)
+    .then(() => showToast('Code copied to clipboard!'))
+    .catch(() => showToast('Code: ' + sessionId));
+}
+
+// Minimal XSS protection for user-supplied strings in innerHTML
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Close autocomplete when clicking elsewhere
+document.addEventListener('click', e => {
+  const input = document.getElementById('addr-input');
+  const list  = document.getElementById('suggestion-list');
+  if (input && list && !input.contains(e.target) && !list.contains(e.target)) {
+    list.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
