@@ -6,6 +6,22 @@
 <title>MeetHalf</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDgem3Y4OkBBQSRULh0OK8bE_WoHLGy4GM",
+    authDomain:        "meethalf01.firebaseapp.com",
+    databaseURL:       "https://meethalf01-default-rtdb.europe-west1.firebasedatabase.app/",
+    projectId:         "meethalf01",
+    storageBucket:     "meethalf01.firebasestorage.app",
+    messagingSenderId: "28009665769",
+    appId:             "1:28009665769:web:33354338a3d41537ae0c78"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap');
 
@@ -706,44 +722,18 @@ let pollInterval = null;
 let addrDebounce = null;
 let sessionData  = null;   // latest snapshot from storage
 let lastVotedPlace = null; // placeId the current user voted for
+let heartbeatInterval = null;
+let sessionUnsub = null;
 
 // ─────────────────────────────────────────────────────────────
 //  STORAGE SHIM
 //  Swaps window.storage (claude.ai) for localStorage (local dev)
 // ─────────────────────────────────────────────────────────────
-const store = (() => {
-  // Use window.storage if available (claude.ai environment)
-  if (typeof window !== 'undefined' && window.storage) {
-    return window.storage;
-  }
-  // Fall back to localStorage for local development
-  return {
-    _prefix: 'meethalf_',
-    async set(key, value, shared) {
-      localStorage.setItem(this._prefix + key, value);
-      return { key, value, shared };
-    },
-    async get(key, shared) {
-      const value = localStorage.getItem(this._prefix + key);
-      if (value === null) throw new Error('Key not found: ' + key);
-      return { key, value, shared };
-    },
-    async delete(key, shared) {
-      localStorage.removeItem(this._prefix + key);
-      return { key, deleted: true, shared };
-    },
-    async list(prefix, shared) {
-      const keys = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith(this._prefix + prefix)) {
-          keys.push(k.slice(this._prefix.length));
-        }
-      }
-      return { keys, prefix, shared };
-    }
-  };
-})();
+function sessionPath(...parts) {
+  return ['sessions', sessionId, ...parts].join('/');
+}
+async function fbSet(path, value) { await db.ref(path).set(value); }
+async function fbRemove(path)     { await db.ref(path).remove(); }
 
 // ─────────────────────────────────────────────────────────────
 //  HELPERS
@@ -835,12 +825,12 @@ async function initSessionScreen() {
 
   // Register this user and start syncing
   await pushMyUser();
-  await syncSession();
-  pollInterval = setInterval(syncSession, SYNC_INTERVAL);
+  startHeartbeat();
+  listenToSession();
 }
 
 function leaveSession() {
-  clearInterval(pollInterval);
+  clearInterval(heartbeatInterval); if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
 
   // Reset all state
   sessionId     = null;
@@ -874,59 +864,40 @@ function leaveSession() {
 async function pushMyUser() {
   if (!sessionId || !myUserId) return;
   try {
-    await store.set(
-      `mh_session_${sessionId}_user_${myUserId}`,
-      JSON.stringify({ id: myUserId, name: myName, coords: myCoords, ts: Date.now() }),
-      true
-    );
-  } catch (e) { console.warn('pushMyUser failed', e); }
+    await fbSet(sessionPath('users', myUserId), {
+      id: myUserId, name: myName, coords: myCoords || null, ts: Date.now()
+    });
+  } catch(e) { console.warn('pushMyUser failed', e); }
 }
 
-async function syncSession() {
-  if (!sessionId) return;
-  try {
-    const prefix = `mh_session_${sessionId}_`;
-    const keysResult = await store.list(prefix, true);
-    if (!keysResult) return;
+function startHeartbeat() {
+  clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(pushMyUser, 5000);
+}
 
-    const users  = [];
-    let places   = null;
-    const votes  = {};
-
-    for (const key of (keysResult.keys || [])) {
-      try {
-        const r = await store.get(key, true);
-        if (!r) continue;
-        const val = JSON.parse(r.value);
-
-        if (key.includes('_user_')) {
-          // Only keep users active in last 30 s
-          if (Date.now() - val.ts < 30000) users.push(val);
-        } else if (key.endsWith('_places')) {
-          places = val;
-        } else if (key.includes('_vote_')) {
-          votes[val.placeId] = (votes[val.placeId] || 0) + 1;
-        }
-      } catch (_) { /* skip malformed entries */ }
-    }
-
+function listenToSession() {
+  if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+  const fbRef = db.ref(sessionPath());
+  const handler = snapshot => {
+    const data = snapshot.val() || {};
+    const users = Object.values(data.users || {})
+      .filter(u => u && Date.now() - (u.ts || 0) < 20000);
+    const places = data.places ? Object.values(data.places) : null;
+    const votes = {};
+    Object.values(data.votes || {}).forEach(v => {
+      if (v && v.placeId) votes[v.placeId] = (votes[v.placeId] || 0) + 1;
+    });
     sessionData = { users, places, votes };
-
     renderUsers(users);
     if (places) renderPlaces(places, votes);
     updateMapMarkers(users);
     updateSearchBtn(users);
-
     const count = users.length;
-    document.getElementById('online-count').textContent =
-      count + ' user' + (count !== 1 ? 's' : '');
-    document.getElementById('status-text').textContent =
-      `Last synced ${new Date().toLocaleTimeString()} · ${count} participant${count !== 1 ? 's' : ''}`;
-
-  } catch (e) {
-    document.getElementById('status-text').textContent = 'Sync error — retrying…';
-    console.warn('syncSession failed', e);
-  }
+    document.getElementById('online-count').textContent = count + ' user' + (count !== 1 ? 's' : '');
+    document.getElementById('status-text').textContent = `En ligne · ${count} participant${count !== 1 ? 's' : ''}`;
+  };
+  fbRef.on('value', handler);
+  sessionUnsub = () => fbRef.off('value', handler);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1215,7 +1186,6 @@ async function setMyLocation() {
   document.getElementById('loc-status').textContent = `✓ Set: ${myCoords.label}`;
   document.getElementById('confirm-loc-btn').disabled = true;
   await pushMyUser();
-  await syncSession();
   showToast('Location saved!');
 }
 
@@ -1278,7 +1248,7 @@ async function searchPlaces() {
       .slice(0, MAX_PLACES);
 
     // Persist results so all session members see them
-    await store.set(`mh_session_${sessionId}_places`, JSON.stringify(places), true);
+    const po={}; places.forEach(p=>{po[p.id]=p;}); await fbSet(sessionPath('places'), po);
 
     renderPlaces(places, sessionData?.votes || {});
     addPlaceMarkersToMap(places, mid);
@@ -1298,19 +1268,14 @@ async function vote(placeId) {
   // Remove previous vote first
   if (lastVotedPlace) {
     try {
-      await store.delete(`mh_session_${sessionId}_vote_${myUserId}`, true);
+      await fbRemove(sessionPath('votes', myUserId));
     } catch (_) {}
   }
 
   lastVotedPlace = placeId;
 
   try {
-    await store.set(
-      `mh_session_${sessionId}_vote_${myUserId}`,
-      JSON.stringify({ placeId, userId: myUserId, ts: Date.now() }),
-      true
-    );
-    await syncSession();
+    await fbSet(sessionPath('votes', myUserId), { placeId, userId: myUserId, ts: Date.now() });
     showToast('Vote cast!');
   } catch (e) {
     showToast('Vote failed — try again');
