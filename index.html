@@ -482,6 +482,65 @@
     padding: 12px;
   }
 
+  /* ─── FOURSQUARE RATINGS & REVIEWS ──────────────────────── */
+  .place-rating {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin-top: 6px;
+    font-size: 11px;
+    flex-wrap: wrap;
+  }
+  .fsq-score {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 1px 7px;
+    color: white;
+    letter-spacing: 0.02em;
+  }
+  .fsq-score.great { background: var(--accent2); }
+  .fsq-score.good  { background: #b8943f; }
+  .fsq-score.ok    { background: var(--muted); }
+  .fsq-rating-count { color: var(--muted); font-size: 10px; }
+  .fsq-loading { color: var(--muted); font-size: 10px; font-style: italic; }
+
+  .tips-toggle {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 2px 8px;
+    transition: all 0.15s;
+  }
+  .tips-toggle:hover { border-color: var(--ink); color: var(--ink); background: none; }
+
+  .tips-panel {
+    display: none;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .tips-panel.open { display: block; }
+
+  .tip-item {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .tip-item:last-child { border-bottom: none; }
+  .tip-agree {
+    font-size: 10px;
+    color: var(--accent2);
+    margin-top: 3px;
+  }
+
   /* ─── RESPONSIVE ─────────────────────────────────────────── */
   @media (max-width: 768px) {
     .welcome-screen { flex-direction: column; }
@@ -702,6 +761,9 @@ const SEARCH_RADIUS = 1500;
 // Max places to display from Overpass results
 const MAX_PLACES = 20;
 
+// Foursquare Places API key (free tier — get yours at developer.foursquare.com)
+const FOURSQUARE_API_KEY = '0E3IKCQH11VNSJ14NNRHNSXN1RK1MEGC1ACB1FPTEGP2A3IT';
+
 // Sync interval (ms) — lower = more responsive, higher = fewer API calls
 const SYNC_INTERVAL = 3000;
 
@@ -724,6 +786,9 @@ let sessionData  = null;   // latest snapshot from storage
 let lastVotedPlace = null; // placeId the current user voted for
 let heartbeatInterval = null;
 let sessionUnsub = null;
+let mapFitted = false;
+let fsqCache = {};        // { osmPlaceId: { fsqId, rating, totalRatings, totalTips } | null }
+let fsqEnriching = false; // true while enrichWithFoursquare is running
 
 // ─────────────────────────────────────────────────────────────
 //  STORAGE SHIM
@@ -824,6 +889,7 @@ async function initSessionScreen() {
   initMap();
 
   // Register this user and start syncing
+  mapFitted = false;
   await pushMyUser();
   startHeartbeat();
   listenToSession();
@@ -838,6 +904,8 @@ function leaveSession() {
   pendingCoords = null;
   lastVotedPlace = null;
   sessionData   = null;
+  fsqCache      = {};
+  fsqEnriching  = false;
 
   // Destroy map
   if (map) { map.remove(); map = null; }
@@ -958,6 +1026,12 @@ function buildFilters() {
   });
 }
 
+function fsqWeightedScore(placeId) {
+  const fsq = fsqCache[placeId];
+  if (!fsq || !fsq.rating) return 0;
+  return fsq.rating * Math.log((fsq.totalRatings || 0) + 1);
+}
+
 function renderPlaces(places, votes) {
   const list = document.getElementById('place-list');
   if (!places || !places.length) {
@@ -966,15 +1040,47 @@ function renderPlaces(places, votes) {
   }
 
   const maxVotes = Math.max(1, ...Object.values(votes));
-  const sorted   = [...places].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0));
+
+  // Sort: FSQ weighted score → votes → distance
+  const sorted = [...places].sort((a, b) => {
+    const sd = fsqWeightedScore(b.id) - fsqWeightedScore(a.id);
+    if (sd !== 0) return sd;
+    const vd = (votes[b.id] || 0) - (votes[a.id] || 0);
+    if (vd !== 0) return vd;
+    return a.dist - b.dist;
+  });
 
   list.innerHTML = '';
   sorted.forEach((p, i) => {
-    const v        = votes[p.id] || 0;
-    const isWinner = i === 0 && v > 0;
+    const v       = votes[p.id] || 0;
+    const fsq     = fsqCache[p.id];
+    const hasFsq  = fsq && fsq.rating;
+    const isWinner = i === 0 && (v > 0 || hasFsq);
     const hasVoted = lastVotedPlace === p.id;
     const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
     const pct      = v ? Math.round((v / maxVotes) * 100) : 0;
+
+    let ratingHtml = '';
+    if (FOURSQUARE_API_KEY) {
+      if (fsq === undefined) {
+        ratingHtml = fsqEnriching
+          ? `<div class="place-rating"><span class="fsq-loading">Loading rating…</span></div>`
+          : '';
+      } else if (fsq === null) {
+        ratingHtml = `<div class="place-rating"><span class="fsq-rating-count" style="font-style:italic;">Not on Foursquare</span></div>`;
+      } else {
+        const scoreClass = fsq.rating >= 8 ? 'great' : fsq.rating >= 6 ? 'good' : 'ok';
+        const tipsBtn = fsq.totalTips > 0
+          ? `<button class="tips-toggle" onclick="toggleTips('${p.id}');event.stopPropagation()">${fsq.totalTips} review${fsq.totalTips !== 1 ? 's' : ''}</button>`
+          : '';
+        ratingHtml = `
+          <div class="place-rating">
+            <span class="fsq-score ${scoreClass}">${fsq.rating.toFixed(1)}<span style="font-size:9px;font-weight:400;opacity:.75">/10</span></span>
+            <span class="fsq-rating-count">${fsq.totalRatings.toLocaleString()} ratings</span>
+            ${tipsBtn}
+          </div>`;
+      }
+    }
 
     const card = document.createElement('div');
     card.className = 'place-card' + (hasVoted ? ' voted' : '') + (isWinner ? ' winner' : '');
@@ -983,6 +1089,7 @@ function renderPlaces(places, votes) {
       <div class="place-name">${p.catIcon} ${escapeHtml(p.name)}</div>
       <div class="place-meta">${escapeHtml(p.type.replace(/_/g, ' '))}${p.addr ? ' · ' + escapeHtml(p.addr) : ''}</div>
       <div class="place-dist">${distStr} from midpoint</div>
+      ${ratingHtml}
       <div class="vote-row">
         <button class="btn sm ${hasVoted ? 'primary' : ''}" data-id="${p.id}" onclick="vote('${p.id}')">
           ${hasVoted ? '✓ Voted' : 'Vote'}
@@ -992,10 +1099,11 @@ function renderPlaces(places, votes) {
         </div>
         <span class="vote-count">${v} vote${v !== 1 ? 's' : ''}</span>
       </div>
+      <div class="tips-panel" id="tips-${p.id}"></div>
     `;
-    // Click card to fly to location on map
     card.addEventListener('click', e => {
       if (e.target.tagName === 'BUTTON') return;
+      if (e.target.closest('.tips-panel')) return;
       map.setView([p.lat, p.lng], 17);
     });
     list.appendChild(card);
@@ -1052,8 +1160,11 @@ function updateMapMarkers(users) {
       .addTo(map)
       .bindTooltip('Midpoint', { permanent: true });
 
-    const bounds = L.latLngBounds(located.map(u => [u.coords.lat, u.coords.lng]));
-    map.fitBounds(bounds, { padding: [60, 60] });
+    if (!mapFitted) {
+      const bounds = L.latLngBounds(located.map(u => [u.coords.lat, u.coords.lng]));
+      map.fitBounds(bounds, { padding: [60, 60] });
+      mapFitted = true;
+    }
   }
 }
 
@@ -1250,9 +1361,11 @@ async function searchPlaces() {
     // Persist results so all session members see them
     const po={}; places.forEach(p=>{po[p.id]=p;}); await fbSet(sessionPath('places'), po);
 
+    fsqCache = {};
     renderPlaces(places, sessionData?.votes || {});
     addPlaceMarkersToMap(places, mid);
     showToast(`Found ${places.length} place${places.length !== 1 ? 's' : ''} near the midpoint`);
+    enrichWithFoursquare(places);
   } catch (e) {
     showToast('Could not fetch places — check connection and retry');
     console.error('searchPlaces failed', e);
@@ -1280,6 +1393,104 @@ async function vote(placeId) {
   } catch (e) {
     showToast('Vote failed — try again');
     console.error('vote failed', e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FOURSQUARE ENRICHMENT
+// ─────────────────────────────────────────────────────────────
+async function enrichWithFoursquare(places) {
+  if (!FOURSQUARE_API_KEY) return;
+  fsqEnriching = true;
+
+  // Fetch all venues in parallel
+  await Promise.all(places.map(async p => {
+    try {
+      const venue = await fetchFsqVenue(p.name, p.lat, p.lng);
+      if (venue && venue.rating != null) {
+        fsqCache[p.id] = {
+          fsqId:        venue.fsq_id,
+          rating:       venue.rating,
+          totalRatings: venue.stats?.total_ratings  || 0,
+          totalTips:    venue.stats?.total_tips     || 0,
+        };
+      } else {
+        fsqCache[p.id] = null;
+      }
+    } catch (e) {
+      fsqCache[p.id] = null;
+      console.warn('FSQ fetch failed for', p.name, e);
+    }
+  }));
+
+  fsqEnriching = false;
+
+  // Re-render with FSQ-sorted order
+  if (sessionData?.places) {
+    renderPlaces(sessionData.places, sessionData.votes || {});
+    const top = sessionData.places
+      .filter(p => fsqCache[p.id]?.rating)
+      .sort((a, b) => fsqWeightedScore(b.id) - fsqWeightedScore(a.id))[0];
+    if (top) showToast(`Top rated: ${top.name} — ${fsqCache[top.id].rating.toFixed(1)}/10`);
+  }
+}
+
+async function fetchFsqVenue(name, lat, lng) {
+  const params = new URLSearchParams({
+    ll:     `${lat},${lng}`,
+    query:  name,
+    limit:  1,
+    radius: 150,
+    fields: 'fsq_id,name,rating,stats',
+  });
+  const r = await fetch(`https://api.foursquare.com/v3/places/search?${params}`, {
+    headers: { Authorization: FOURSQUARE_API_KEY, Accept: 'application/json' },
+  });
+  if (!r.ok) throw new Error(`FSQ ${r.status}`);
+  const data = await r.json();
+  return data.results?.[0] ?? null;
+}
+
+async function toggleTips(placeId) {
+  const panel = document.getElementById('tips-' + placeId);
+  if (!panel) return;
+
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    return;
+  }
+  panel.classList.add('open');
+  if (panel.dataset.loaded) return;
+
+  const fsq = fsqCache[placeId];
+  if (!fsq?.fsqId || !fsq.totalTips) {
+    panel.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic;">No written reviews available.</div>';
+    panel.dataset.loaded = '1';
+    return;
+  }
+
+  panel.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0;">Loading reviews…</div>';
+
+  try {
+    const r = await fetch(
+      `https://api.foursquare.com/v3/places/${fsq.fsqId}/tips?limit=5&fields=text,agree_count`,
+      { headers: { Authorization: FOURSQUARE_API_KEY, Accept: 'application/json' } }
+    );
+    if (!r.ok) throw new Error(`FSQ tips ${r.status}`);
+    const data  = await r.json();
+    const tips  = data.items || [];
+
+    panel.innerHTML = tips.length
+      ? tips.map(t => `
+          <div class="tip-item">
+            <div>${escapeHtml(t.text)}</div>
+            ${t.agree_count > 0 ? `<div class="tip-agree">▲ ${t.agree_count} found helpful</div>` : ''}
+          </div>`).join('')
+      : '<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic;">No written reviews yet.</div>';
+    panel.dataset.loaded = '1';
+  } catch (e) {
+    panel.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0;">Could not load reviews.</div>';
+    console.warn('toggleTips failed', e);
   }
 }
 
