@@ -1191,13 +1191,18 @@ function addPlaceMarkersToMap(places, mid) {
       .bindPopup(() => {
         const fsq    = fsqCache[p.id];
         const fsqUrl = fsq?.fsqId ? `https://foursquare.com/v/${fsq.fsqId}` : null;
+        const osmUrl = `https://www.openstreetmap.org/node/${p.id}`;
+        const links  = [
+          fsqUrl ? `<a href="${fsqUrl}" target="_blank">Foursquare</a>` : null,
+          p.url  ? `<a href="${p.url}"  target="_blank">Website</a>`    : null,
+                   `<a href="${osmUrl}" target="_blank">OpenStreetMap</a>`,
+        ].filter(Boolean).join(' · ');
         return `
           <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
           <small style="font-family:DM Mono,monospace;color:#7a7870;">
             ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
-          </small>
-          ${fsqUrl ? `<br><a href="${fsqUrl}" target="_blank" style="font-size:11px;font-family:DM Mono,monospace;">View on Foursquare →</a>` : ''}
-          ${p.url  ? `<br><a href="${p.url}"  target="_blank" style="font-size:11px;font-family:DM Mono,monospace;">Website →</a>` : ''}
+          </small><br>
+          <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
         `;
       });
     placeMarkers.push(m);
