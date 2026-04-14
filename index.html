@@ -1192,6 +1192,11 @@ function addPlaceMarkersToMap(places, mid) {
         const fsq    = fsqCache[p.id];
         const fsqUrl = fsq?.fsqId ? `https://foursquare.com/v/${fsq.fsqId}` : null;
         const osmUrl = `https://www.openstreetmap.org/node/${p.id}`;
+        const scoreColor = fsq?.rating >= 8 ? '#2a6b4f' : fsq?.rating >= 6 ? '#b8943f' : '#7a7870';
+        const ratingHtml = fsq?.rating != null
+          ? `<span style="font-weight:500;color:${scoreColor};">${fsq.rating.toFixed(1)}/10</span>`
+            + `<span style="color:#7a7870;"> · ${fsq.totalRatings.toLocaleString()} ratings</span>`
+          : '';
         const links  = [
           fsqUrl ? `<a href="${fsqUrl}" target="_blank">Foursquare</a>` : null,
           p.url  ? `<a href="${p.url}"  target="_blank">Website</a>`    : null,
@@ -1201,7 +1206,8 @@ function addPlaceMarkersToMap(places, mid) {
           <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
           <small style="font-family:DM Mono,monospace;color:#7a7870;">
             ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
-          </small><br>
+          </small>
+          ${ratingHtml ? `<br><div style="margin-top:4px;font-size:11px;font-family:DM Mono,monospace;">${ratingHtml}</div>` : ''}
           <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
         `;
       });
