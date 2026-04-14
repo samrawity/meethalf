@@ -1188,13 +1188,18 @@ function addPlaceMarkersToMap(places, mid) {
     const distStr = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
     const m = L.marker([p.lat, p.lng], { icon })
       .addTo(map)
-      .bindPopup(`
-        <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
-        <small style="font-family:DM Mono,monospace;color:#7a7870;">
-          ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
-        </small>
-        ${p.url ? `<br><a href="${p.url}" target="_blank" style="font-size:11px;">Website →</a>` : ''}
-      `);
+      .bindPopup(() => {
+        const fsq    = fsqCache[p.id];
+        const fsqUrl = fsq?.fsqId ? `https://foursquare.com/v/${fsq.fsqId}` : null;
+        return `
+          <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
+          <small style="font-family:DM Mono,monospace;color:#7a7870;">
+            ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
+          </small>
+          ${fsqUrl ? `<br><a href="${fsqUrl}" target="_blank" style="font-size:11px;font-family:DM Mono,monospace;">View on Foursquare →</a>` : ''}
+          ${p.url  ? `<br><a href="${p.url}"  target="_blank" style="font-size:11px;font-family:DM Mono,monospace;">Website →</a>` : ''}
+        `;
+      });
     placeMarkers.push(m);
   });
 }
