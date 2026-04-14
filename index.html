@@ -759,7 +759,7 @@ const CATEGORIES = [
 const SEARCH_RADIUS = 1500;
 
 // Max places to display from Overpass results
-const MAX_PLACES = 20;
+const MAX_PLACES = 10;
 
 // Foursquare Places API key (free tier — get yours at developer.foursquare.com)
 const FOURSQUARE_API_KEY = 'fsq3p/+mqtT65w9dMRkOoiZgNsn12hdqEY1DDKhJZnVG6Ks=';
@@ -1333,7 +1333,7 @@ async function searchPlaces() {
     });
     const data = await r.json();
 
-    const places = (data.elements || [])
+    const allPlaces = (data.elements || [])
       .filter(el => el.tags && el.tags.name)
       .map(el => {
         const dist = Math.round(haversine(mid.lat, mid.lng, el.lat, el.lon));
@@ -1355,8 +1355,16 @@ async function searchPlaces() {
           url:     el.tags.website || el.tags['contact:website'] || '',
         };
       })
-      .sort((a, b) => a.dist - b.dist)
-      .slice(0, MAX_PLACES);
+      .sort((a, b) => a.dist - b.dist);
+
+    // Keep at most 5 results per category, then re-sort by distance
+    const perCatCount = {};
+    const places = allPlaces
+      .filter(p => {
+        perCatCount[p.cat] = (perCatCount[p.cat] || 0) + 1;
+        return perCatCount[p.cat] <= 5;
+      })
+      .sort((a, b) => a.dist - b.dist);
 
     // Persist results so all session members see them
     const po={}; places.forEach(p=>{po[p.id]=p;}); await fbSet(sessionPath('places'), po);
