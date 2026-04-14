@@ -1196,9 +1196,11 @@ function addPlaceMarkersToMap(places, mid) {
           ? `<span style="font-weight:500;color:${scoreColor};">${fsq.rating.toFixed(1)}/10</span>`
             + `<span style="color:#7a7870;"> · ${fsq.totalRatings.toLocaleString()} ratings</span>`
           : '';
+        const osmUrl = `https://www.openstreetmap.org/node/${p.id}`;
         const links = [
           fsqUrl ? `<a href="${fsqUrl}" target="_blank">Foursquare</a>` : null,
           p.url  ? `<a href="${p.url}"  target="_blank">Website</a>`    : null,
+                   `<a href="${osmUrl}" target="_blank">OpenStreetMap</a>`,
         ].filter(Boolean).join(' · ');
         return `
           <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
