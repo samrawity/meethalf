@@ -831,9 +831,10 @@ async function toggleTips(placeId) {
 //  UTILS
 // ─────────────────────────────────────────────────────────────
 function copyCode() {
-  navigator.clipboard.writeText(sessionId)
-    .then(() => showToast('Code copied to clipboard!'))
-    .catch(() => showToast('Code: ' + sessionId));
+  const url = location.origin + '/join/' + sessionId;
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('Link copied to clipboard!'))
+    .catch(() => showToast(url));
 }
 
 // Minimal XSS protection for user-supplied strings in innerHTML
