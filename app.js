@@ -658,14 +658,28 @@ async function searchPlaces() {
     `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
   ).join('\n');
 
-  const overpassQuery = `[out:json][timeout:20];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
+  const overpassQuery = `[out:json][timeout:25];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
+
+  const OVERPASS_ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+  ];
+
+  async function fetchOverpass(query) {
+    const body = 'data=' + encodeURIComponent(query);
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      try {
+        const r = await fetch(endpoint, { method: 'POST', body });
+        if (!r.ok) continue;
+        return await r.json();
+      } catch (_) { /* try next */ }
+    }
+    throw new Error('All Overpass endpoints failed');
+  }
 
   try {
-    const r = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      body: 'data=' + encodeURIComponent(overpassQuery)
-    });
-    const data = await r.json();
+    const data = await fetchOverpass(overpassQuery);
 
     const allPlaces = (data.elements || [])
       .filter(el => el.tags && el.tags.name)
