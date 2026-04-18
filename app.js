@@ -119,6 +119,7 @@ function initMap(center = [48.8566, 2.3522]) {
 function createSession() {
   const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
   myName    = name;
+  localStorage.setItem('meethalf_name', name);
   myUserId  = genUserId();
   sessionId = genCode();
   history.pushState({ sessionId }, '', '?s=' + sessionId);
@@ -130,6 +131,7 @@ function joinSession() {
   const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
   if (!code || code.length < 4) { showToast('Enter a valid session code'); return; }
   myName    = name;
+  localStorage.setItem('meethalf_name', name);
   myUserId  = genUserId();
   sessionId = code;
   history.pushState({ sessionId }, '', '?s=' + sessionId);
@@ -863,11 +865,22 @@ document.addEventListener('click', e => {
   const code = new URLSearchParams(location.search).get('s');
   if (!code) return;
   const upper = code.toUpperCase();
-  const codeInput = document.getElementById('join-code-input');
-  const nameInput = document.getElementById('user-name-input');
-  if (codeInput) codeInput.value = upper;
-  if (nameInput) nameInput.focus();
   history.replaceState({}, '', '?s=' + upper);
+
+  const savedName = localStorage.getItem('meethalf_name');
+  if (savedName) {
+    // Known user — jump straight into the session
+    myName    = savedName;
+    myUserId  = genUserId();
+    sessionId = upper;
+    initSessionScreen();
+  } else {
+    // New visitor — pre-fill code and focus name input
+    const codeInput = document.getElementById('join-code-input');
+    const nameInput = document.getElementById('user-name-input');
+    if (codeInput) codeInput.value = upper;
+    if (nameInput) nameInput.focus();
+  }
 })();
 
 // Handle browser back/forward navigation
