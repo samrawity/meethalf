@@ -616,11 +616,12 @@ async function searchPlaces() {
   loadingEl.style.display = 'flex';
 
   // Build Overpass QL query — one node clause per category
-  const nodeClauses = selectedCats.map(cat =>
-    `nwr["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
-  ).join('\n');
+  const clauses = selectedCats.flatMap(cat => [
+    `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`,
+    `way["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`,
+  ]).join('\n');
 
-  const overpassQuery = `[out:json][timeout:15];(\n${nodeClauses}\n);out center ${MAX_PLACES * 3};`;
+  const overpassQuery = `[out:json][timeout:25];(\n${clauses}\n);out body center ${MAX_PLACES * 5};`;
 
   const OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
@@ -653,7 +654,7 @@ async function searchPlaces() {
   try {
     const data = await fetchOverpass(overpassQuery);
 
-    console.log('[Overpass] elements received:', data.elements?.length ?? 0);
+    console.log('[Overpass] elements received:', data.elements?.length ?? 0, data.remark || '');
     const allPlaces = (data.elements || [])
       .filter(el => el.tags && el.tags.name)
       .map(el => {
