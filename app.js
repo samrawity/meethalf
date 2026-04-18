@@ -606,25 +606,28 @@ async function searchPlaces() {
     `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
   ).join('\n');
 
-  const overpassQuery = `[out:json][timeout:25];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
+  const overpassQuery = `[out:json][timeout:15];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
 
   const OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
     'https://overpass.kumi.systems/api/interpreter',
-    'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+    'https://overpass.openstreetmap.fr/api/interpreter',
+    'https://overpass.osm.ch/api/interpreter',
   ];
 
   async function fetchOverpass(query) {
     const body = 'data=' + encodeURIComponent(query);
     const controllers = OVERPASS_ENDPOINTS.map(() => new AbortController());
 
-    const attempt = (endpoint, i) =>
-      fetch(endpoint, { method: 'POST', body, signal: controllers[i].signal })
-        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-        .then(data => {
-          controllers.forEach((c, j) => { if (j !== i) c.abort(); });
-          return data;
-        });
+    const attempt = async (endpoint, i) => {
+      const timeout = setTimeout(() => controllers[i].abort(), 20000);
+      const r = await fetch(endpoint, { method: 'POST', body, signal: controllers[i].signal });
+      if (!r.ok) throw new Error(r.status);
+      const data = await r.json();
+      clearTimeout(timeout);
+      controllers.forEach((c, j) => { if (j !== i) c.abort(); });
+      return data;
+    };
 
     try {
       return await Promise.any(OVERPASS_ENDPOINTS.map((ep, i) => attempt(ep, i)));
