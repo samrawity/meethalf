@@ -584,6 +584,7 @@ input:focus, select:focus { border-color: var(--ink); }
     z-index: 200;
     width: 100%;
     min-width: unset;
+    background: var(--paper);
     max-height: 85vh;
     border-right: none;
     border-top: 1px solid var(--border);
@@ -608,7 +609,7 @@ input:focus, select:focus { border-color: var(--ink); }
     user-select: none;
     position: sticky;
     top: 0;
-    background: var(--surface);
+    background: var(--paper);
     z-index: 1;
     border-radius: 16px 16px 0 0;
   }
