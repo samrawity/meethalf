@@ -121,7 +121,7 @@ function createSession() {
   myName    = name;
   myUserId  = genUserId();
   sessionId = genCode();
-  history.pushState({ sessionId }, '', '/join/' + sessionId);
+  history.pushState({ sessionId }, '', '?s=' + sessionId);
   initSessionScreen();
 }
 
@@ -132,7 +132,7 @@ function joinSession() {
   myName    = name;
   myUserId  = genUserId();
   sessionId = code;
-  history.pushState({ sessionId }, '', '/join/' + sessionId);
+  history.pushState({ sessionId }, '', '?s=' + sessionId);
   initSessionScreen();
 }
 
@@ -188,7 +188,7 @@ function leaveSession() {
   document.removeEventListener('visibilitychange', onVisibilityChange);
   if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
 
-  history.pushState({}, '', '/');
+  history.pushState({}, '', location.pathname);
 
   // Close the bottom sheet if open
   const sidebar = document.querySelector('.sidebar');
@@ -831,7 +831,7 @@ async function toggleTips(placeId) {
 //  UTILS
 // ─────────────────────────────────────────────────────────────
 function copyCode() {
-  const url = location.origin + '/join/' + sessionId;
+  const url = location.origin + location.pathname + '?s=' + sessionId;
   navigator.clipboard.writeText(url)
     .then(() => showToast('Link copied to clipboard!'))
     .catch(() => showToast(url));
@@ -860,16 +860,14 @@ document.addEventListener('click', e => {
 //  Handles direct links: meethalf.app/join/ABC123
 // ─────────────────────────────────────────────────────────────
 (function detectSessionFromUrl() {
-  const match = location.pathname.match(/^\/join\/([A-Z0-9]{4,8})$/i);
-  if (!match) return;
-  const code = match[1].toUpperCase();
-  // Pre-fill the join code and focus the name field
+  const code = new URLSearchParams(location.search).get('s');
+  if (!code) return;
+  const upper = code.toUpperCase();
   const codeInput = document.getElementById('join-code-input');
   const nameInput = document.getElementById('user-name-input');
-  if (codeInput) codeInput.value = code;
+  if (codeInput) codeInput.value = upper;
   if (nameInput) nameInput.focus();
-  // Normalise the URL casing without adding a history entry
-  history.replaceState({}, '', '/join/' + code);
+  history.replaceState({}, '', '?s=' + upper);
 })();
 
 // Handle browser back/forward navigation
