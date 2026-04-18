@@ -616,14 +616,21 @@ async function searchPlaces() {
 
   async function fetchOverpass(query) {
     const body = 'data=' + encodeURIComponent(query);
-    for (const endpoint of OVERPASS_ENDPOINTS) {
-      try {
-        const r = await fetch(endpoint, { method: 'POST', body });
-        if (!r.ok) continue;
-        return await r.json();
-      } catch (_) { /* try next */ }
+    const controllers = OVERPASS_ENDPOINTS.map(() => new AbortController());
+
+    const attempt = (endpoint, i) =>
+      fetch(endpoint, { method: 'POST', body, signal: controllers[i].signal })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => {
+          controllers.forEach((c, j) => { if (j !== i) c.abort(); });
+          return data;
+        });
+
+    try {
+      return await Promise.any(OVERPASS_ENDPOINTS.map((ep, i) => attempt(ep, i)));
+    } catch {
+      throw new Error('All Overpass endpoints failed');
     }
-    throw new Error('All Overpass endpoints failed');
   }
 
   try {
