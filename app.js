@@ -1,0 +1,816 @@
+'use strict';
+
+// ─────────────────────────────────────────────────────────────
+//  CONFIGURATION
+//  Add or modify categories here — the rest of the app adapts.
+//  osmKey: the OSM tag key  ("amenity", "leisure", "tourism"…)
+//  query:  pipe-separated OSM tag values to match
+// ─────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { id: 'food',    label: 'Food',    icon: '🍽', query: 'restaurant|fast_food|bakery',  osmKey: 'amenity' },
+  { id: 'cafe',    label: 'Café',    icon: '☕', query: 'cafe',                          osmKey: 'amenity' },
+  { id: 'drink',   label: 'Drink',   icon: '🍺', query: 'bar|pub|biergarten',           osmKey: 'amenity' },
+  { id: 'gym',     label: 'Gym',     icon: '🏋', query: 'fitness_centre|sports_centre', osmKey: 'leisure' },
+  { id: 'park',    label: 'Park',    icon: '🌿', query: 'park',                         osmKey: 'leisure' },
+  { id: 'culture', label: 'Culture', icon: '🎭', query: 'theatre|cinema|museum',        osmKey: 'amenity' },
+  // ↓ Add more categories below — just copy the pattern above.
+  // { id: 'hotel', label: 'Hotel', icon: '🏨', query: 'hotel|hostel', osmKey: 'tourism' },
+];
+
+// Overpass search radius in metres around the midpoint
+const SEARCH_RADIUS = 1500;
+
+// Max places to display from Overpass results
+const MAX_PLACES = 10;
+
+// Foursquare Places API key (free tier — get yours at developer.foursquare.com)
+const FOURSQUARE_API_KEY = 'fsq3p/+mqtT65w9dMRkOoiZgNsn12hdqEY1DDKhJZnVG6Ks=';
+
+// Sync interval (ms) — lower = more responsive, higher = fewer API calls
+const SYNC_INTERVAL = 3000;
+
+// ─────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────
+let sessionId     = null;
+let myUserId      = null;
+let myName        = '';
+let myCoords      = null;   // { lat, lng, label }
+let pendingCoords = null;   // staged coords before user confirms
+let map           = null;
+let userMarkers   = {};
+let midpointMarker = null;
+let placeMarkers  = [];
+let activeFilters = new Set(['food']);
+let pollInterval  = null;
+let addrDebounce  = null;
+let sessionData   = null;   // latest snapshot from storage
+let lastVotedPlace = null;  // placeId the current user voted for
+let heartbeatInterval = null;
+let sessionUnsub  = null;
+let mapFitted     = false;
+let fsqCache      = {};     // { osmPlaceId: { fsqId, rating, totalRatings, totalTips } | null }
+let fsqEnriching  = false;  // true while enrichWithFoursquare is running
+
+// ─────────────────────────────────────────────────────────────
+//  STORAGE
+// ─────────────────────────────────────────────────────────────
+function sessionPath(...parts) {
+  return ['sessions', sessionId, ...parts].join('/');
+}
+async function fbSet(path, value) { await db.ref(path).set(value); }
+async function fbRemove(path)     { await db.ref(path).remove(); }
+
+// ─────────────────────────────────────────────────────────────
+//  HELPERS
+// ─────────────────────────────────────────────────────────────
+function genCode()   { return Math.random().toString(36).substring(2, 8).toUpperCase(); }
+function genUserId() { return 'u_' + Math.random().toString(36).substring(2, 10); }
+
+function showToast(msg, dur = 2500) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), dur);
+}
+
+// Haversine distance in metres between two lat/lng points
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+    * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Spherical midpoint from array of { lat, lng } objects
+function calcMidpoint(coords) {
+  let x = 0, y = 0, z = 0;
+  coords.forEach(c => {
+    const lat = c.lat * Math.PI / 180;
+    const lng = c.lng * Math.PI / 180;
+    x += Math.cos(lat) * Math.cos(lng);
+    y += Math.cos(lat) * Math.sin(lng);
+    z += Math.sin(lat);
+  });
+  x /= coords.length; y /= coords.length; z /= coords.length;
+  const lng = Math.atan2(y, x) * 180 / Math.PI;
+  const lat = Math.atan2(z, Math.sqrt(x * x + y * y)) * 180 / Math.PI;
+  return { lat, lng };
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MAP INIT
+// ─────────────────────────────────────────────────────────────
+function initMap(center = [48.8566, 2.3522]) {
+  if (map) return;
+  map = L.map('map', { zoomControl: true }).setView(center, 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(map);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SESSION LIFECYCLE
+// ─────────────────────────────────────────────────────────────
+function createSession() {
+  const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
+  myName    = name;
+  myUserId  = genUserId();
+  sessionId = genCode();
+  initSessionScreen();
+}
+
+function joinSession() {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
+  if (!code || code.length < 4) { showToast('Enter a valid session code'); return; }
+  myName    = name;
+  myUserId  = genUserId();
+  sessionId = code;
+  initSessionScreen();
+}
+
+async function initSessionScreen() {
+  document.getElementById('screen-welcome').classList.remove('active');
+  document.getElementById('screen-session').classList.add('active');
+
+  document.getElementById('code-display').innerHTML =
+    sessionId + '<span class="copy-hint">Click to copy</span>';
+  const badge = document.getElementById('header-code-badge');
+  badge.textContent = 'Session — ' + sessionId;
+  badge.style.display = 'inline';
+
+  buildFilters();
+  initMap();
+
+  mapFitted = false;
+  await pushMyUser();
+  startHeartbeat();
+  listenToSession();
+}
+
+function leaveSession() {
+  clearInterval(heartbeatInterval);
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+
+  // Cancel the server-side onDisconnect handler and remove the user entry immediately.
+  if (sessionId && myUserId) {
+    const ref = db.ref(sessionPath('users', myUserId));
+    ref.onDisconnect().cancel();
+    ref.remove();
+  }
+
+  // Reset all state
+  sessionId      = null;
+  myCoords       = null;
+  pendingCoords  = null;
+  lastVotedPlace = null;
+  sessionData    = null;
+  fsqCache       = {};
+  fsqEnriching   = false;
+
+  // Destroy map
+  if (map) { map.remove(); map = null; }
+  Object.values(userMarkers).forEach(m => m.remove());
+  userMarkers = {};
+  placeMarkers.forEach(m => m.remove());
+  placeMarkers = [];
+  if (midpointMarker) { midpointMarker.remove(); midpointMarker = null; }
+
+  // Reset UI
+  document.getElementById('screen-session').classList.remove('active');
+  document.getElementById('screen-welcome').classList.add('active');
+  document.getElementById('addr-input').value = '';
+  document.getElementById('loc-status').textContent = '';
+  document.getElementById('place-list').innerHTML =
+    '<div class="empty-state">Search for places to see results here.</div>';
+  document.getElementById('user-list').innerHTML =
+    '<div class="empty-state">Waiting for participants…</div>';
+}
+
+// ─────────────────────────────────────────────────────────────
+//  STORAGE — push / pull
+// ─────────────────────────────────────────────────────────────
+async function pushMyUser() {
+  if (!sessionId || !myUserId) return;
+  try {
+    const ref = db.ref(sessionPath('users', myUserId));
+    // Register server-side cleanup: Firebase removes this entry the moment
+    // the client's connection drops (tab close, network loss, browser kill).
+    await ref.onDisconnect().remove();
+    await ref.set({ id: myUserId, name: myName, coords: myCoords || null, ts: Date.now() });
+  } catch(e) { console.warn('pushMyUser failed', e); }
+}
+
+function startHeartbeat() {
+  clearInterval(heartbeatInterval);
+  heartbeatInterval = setInterval(pushMyUser, 30000);
+
+  // Re-push immediately when the user returns to this tab,
+  // bypassing browser timer throttling on background tabs.
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  document.addEventListener('visibilitychange', onVisibilityChange);
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') pushMyUser();
+}
+
+function listenToSession() {
+  if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+  const fbRef = db.ref(sessionPath());
+  const handler = snapshot => {
+    const data = snapshot.val() || {};
+    const users = Object.values(data.users || {})
+      .filter(u => u && Date.now() - (u.ts || 0) < 300000);
+    const places = data.places ? Object.values(data.places) : null;
+    const votes = {};
+    Object.values(data.votes || {}).forEach(v => {
+      if (v && v.placeId) votes[v.placeId] = (votes[v.placeId] || 0) + 1;
+    });
+    sessionData = { users, places, votes };
+    renderUsers(users);
+    if (places) renderPlaces(places, votes);
+    updateMapMarkers(users);
+    updateSearchBtn(users);
+    const count = users.length;
+    document.getElementById('online-count').textContent = count + ' user' + (count !== 1 ? 's' : '');
+    document.getElementById('status-text').textContent = `En ligne · ${count} participant${count !== 1 ? 's' : ''}`;
+  };
+  fbRef.on('value', handler);
+  sessionUnsub = () => fbRef.off('value', handler);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UI RENDERING
+// ─────────────────────────────────────────────────────────────
+function renderUsers(users) {
+  const list = document.getElementById('user-list');
+  if (!users.length) {
+    list.innerHTML = '<div class="empty-state">Waiting for participants…</div>';
+    return;
+  }
+  list.innerHTML = '';
+  users.forEach(u => {
+    const isMe = u.id === myUserId;
+    const div  = document.createElement('div');
+    div.className = 'user-item';
+    div.innerHTML = `
+      <div class="user-dot ${u.coords ? 'located' : ''} ${isMe ? 'me' : ''}"></div>
+      <div>
+        <div class="user-name">${escapeHtml(u.name)}${isMe ? ' <span style="color:var(--muted);font-weight:400;">(you)</span>' : ''}</div>
+        <div class="user-loc">${u.coords ? '📍 ' + escapeHtml(u.coords.label || 'Located') : 'No location set'}</div>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function updateSearchBtn(users) {
+  const located = users.filter(u => u.coords).length;
+  const btn = document.getElementById('search-btn');
+  btn.disabled = located < 2;
+  if (located < 2) {
+    const needed = 2 - located;
+    btn.textContent = `Need ${needed} more participant${needed !== 1 ? 's' : ''} to search`;
+  } else {
+    btn.textContent = `Find midpoint places (${located} locations)`;
+  }
+}
+
+function buildFilters() {
+  const row = document.getElementById('filters-row');
+  row.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const tag = document.createElement('div');
+    tag.className = 'filter-tag' + (activeFilters.has(cat.id) ? ' active' : '');
+    tag.dataset.id = cat.id;
+    tag.innerHTML = `<span class="icon">${cat.icon}</span>${cat.label}`;
+    tag.addEventListener('click', () => {
+      if (activeFilters.has(cat.id)) {
+        activeFilters.delete(cat.id);
+        tag.classList.remove('active');
+      } else {
+        activeFilters.add(cat.id);
+        tag.classList.add('active');
+      }
+    });
+    row.appendChild(tag);
+  });
+}
+
+function fsqWeightedScore(placeId) {
+  const fsq = fsqCache[placeId];
+  if (!fsq || !fsq.rating) return 0;
+  return fsq.rating * Math.log((fsq.totalRatings || 0) + 1);
+}
+
+function renderPlaces(places, votes) {
+  const list = document.getElementById('place-list');
+  if (!places || !places.length) {
+    list.innerHTML = '<div class="empty-state">No places found. Try different filters or a wider search.</div>';
+    return;
+  }
+
+  const maxVotes = Math.max(1, ...Object.values(votes));
+
+  // Sort: FSQ weighted score → votes → distance
+  const sorted = [...places].sort((a, b) => {
+    const sd = fsqWeightedScore(b.id) - fsqWeightedScore(a.id);
+    if (sd !== 0) return sd;
+    const vd = (votes[b.id] || 0) - (votes[a.id] || 0);
+    if (vd !== 0) return vd;
+    return a.dist - b.dist;
+  });
+
+  list.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const v        = votes[p.id] || 0;
+    const fsq      = fsqCache[p.id];
+    const hasFsq   = fsq && fsq.rating;
+    const isWinner = i === 0 && (v > 0 || hasFsq);
+    const hasVoted = lastVotedPlace === p.id;
+    const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
+    const pct      = v ? Math.round((v / maxVotes) * 100) : 0;
+
+    let ratingHtml = '';
+    if (FOURSQUARE_API_KEY) {
+      if (fsq === undefined) {
+        ratingHtml = fsqEnriching
+          ? `<div class="place-rating"><span class="fsq-loading">Loading rating…</span></div>`
+          : '';
+      } else if (fsq === null) {
+        ratingHtml = `<div class="place-rating"><span class="fsq-rating-count" style="font-style:italic;">Not on Foursquare</span></div>`;
+      } else {
+        const scoreClass = fsq.rating >= 8 ? 'great' : fsq.rating >= 6 ? 'good' : 'ok';
+        const tipsBtn = fsq.totalTips > 0
+          ? `<button class="tips-toggle" onclick="toggleTips('${p.id}');event.stopPropagation()">${fsq.totalTips} review${fsq.totalTips !== 1 ? 's' : ''}</button>`
+          : '';
+        ratingHtml = `
+          <div class="place-rating">
+            <span class="fsq-score ${scoreClass}">${fsq.rating.toFixed(1)}<span style="font-size:9px;font-weight:400;opacity:.75">/10</span></span>
+            <span class="fsq-rating-count">${fsq.totalRatings.toLocaleString()} ratings</span>
+            ${tipsBtn}
+          </div>`;
+      }
+    }
+
+    const card = document.createElement('div');
+    card.className = 'place-card' + (hasVoted ? ' voted' : '') + (isWinner ? ' winner' : '');
+    card.innerHTML = `
+      ${isWinner ? '<span class="winner-crown">Top pick</span>' : ''}
+      <div class="place-name">${p.catIcon} ${escapeHtml(p.name)}</div>
+      <div class="place-meta">${escapeHtml(p.type.replace(/_/g, ' '))}${p.addr ? ' · ' + escapeHtml(p.addr) : ''}</div>
+      <div class="place-dist">${distStr} from midpoint</div>
+      ${ratingHtml}
+      <div class="vote-row">
+        <button class="btn sm ${hasVoted ? 'primary' : ''}" data-id="${p.id}" onclick="vote('${p.id}')">
+          ${hasVoted ? '✓ Voted' : 'Vote'}
+        </button>
+        <div class="vote-bar-wrap">
+          <div class="vote-bar" style="width:${pct}%"></div>
+        </div>
+        <span class="vote-count">${v} vote${v !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="tips-panel" id="tips-${p.id}"></div>
+    `;
+    card.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      if (e.target.closest('.tips-panel')) return;
+      map.setView([p.lat, p.lng], 17);
+    });
+    list.appendChild(card);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  MAP MARKERS
+// ─────────────────────────────────────────────────────────────
+function updateMapMarkers(users) {
+  Object.values(userMarkers).forEach(m => m.remove());
+  userMarkers = {};
+
+  const located = users.filter(u => u.coords);
+
+  located.forEach(u => {
+    const isMe    = u.id === myUserId;
+    const color   = isMe ? '#c84a1e' : '#2a6b4f';
+    const initial = u.name[0].toUpperCase();
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:32px;height:32px;border-radius:50%;
+        background:${color};border:2px solid white;
+        display:flex;align-items:center;justify-content:center;
+        font-size:12px;font-weight:500;color:white;
+        font-family:'DM Mono',monospace;
+        box-shadow:0 2px 6px rgba(0,0,0,0.25);
+      ">${initial}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16]
+    });
+    userMarkers[u.id] = L.marker([u.coords.lat, u.coords.lng], { icon })
+      .addTo(map)
+      .bindTooltip(u.name, { permanent: false });
+  });
+
+  // Draw/update midpoint marker
+  if (located.length >= 2) {
+    const mid = calcMidpoint(located.map(u => u.coords));
+    if (midpointMarker) midpointMarker.remove();
+    const mIcon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:14px;height:14px;background:#c84a1e;
+        transform:rotate(45deg);border:2px solid white;
+        box-shadow:0 2px 6px rgba(0,0,0,0.3);
+      "></div>`,
+      iconSize: [14, 14],
+      iconAnchor: [7, 7]
+    });
+    midpointMarker = L.marker([mid.lat, mid.lng], { icon: mIcon })
+      .addTo(map)
+      .bindTooltip('Midpoint', { permanent: true });
+
+    if (!mapFitted) {
+      const bounds = L.latLngBounds(located.map(u => [u.coords.lat, u.coords.lng]));
+      map.fitBounds(bounds, { padding: [60, 60] });
+      mapFitted = true;
+    }
+  }
+}
+
+function addPlaceMarkersToMap(places, mid) {
+  placeMarkers.forEach(m => m.remove());
+  placeMarkers = [];
+
+  places.forEach(p => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="
+        width:28px;height:28px;border-radius:50%;
+        background:#f5f2ea;border:1.5px solid #1a1a18;
+        display:flex;align-items:center;justify-content:center;
+        font-size:14px;box-shadow:0 2px 4px rgba(0,0,0,0.12);
+      ">${p.catIcon}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    const distStr = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
+    const m = L.marker([p.lat, p.lng], { icon })
+      .addTo(map)
+      .bindPopup(() => {
+        const fsq        = fsqCache[p.id];
+        const fsqUrl     = fsq?.fsqId ? `https://foursquare.com/v/${fsq.fsqId}` : null;
+        const scoreColor = fsq?.rating >= 8 ? '#2a6b4f' : fsq?.rating >= 6 ? '#b8943f' : '#7a7870';
+        const ratingHtml = fsq?.rating != null
+          ? `<span style="font-weight:500;color:${scoreColor};">${fsq.rating.toFixed(1)}/10</span>`
+            + `<span style="color:#7a7870;"> · ${fsq.totalRatings.toLocaleString()} ratings</span>`
+          : '';
+        const osmUrl = `https://www.openstreetmap.org/node/${p.id}`;
+        const links  = [
+          fsqUrl ? `<a href="${fsqUrl}" target="_blank">Foursquare</a>` : null,
+          p.url  ? `<a href="${p.url}"  target="_blank">Website</a>`    : null,
+                   `<a href="${osmUrl}" target="_blank">OpenStreetMap</a>`,
+        ].filter(Boolean).join(' · ');
+        return `
+          <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
+          <small style="font-family:DM Mono,monospace;color:#7a7870;">
+            ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
+          </small>
+          ${ratingHtml ? `<br><div style="margin-top:4px;font-size:11px;font-family:DM Mono,monospace;">${ratingHtml}</div>` : ''}
+          <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
+        `;
+      });
+    placeMarkers.push(m);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+//  LOCATION — GPS & GEOCODING
+// ─────────────────────────────────────────────────────────────
+function useGPS() {
+  if (!navigator.geolocation) {
+    showToast('GPS not available in this browser');
+    return;
+  }
+  document.getElementById('loc-status').textContent = 'Acquiring GPS…';
+  navigator.geolocation.getCurrentPosition(
+    async pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      const label = await reverseGeocode(lat, lng);
+      pendingCoords = { lat, lng, label };
+      document.getElementById('addr-input').value = label;
+      document.getElementById('confirm-loc-btn').disabled = false;
+      document.getElementById('loc-status').textContent = `📍 ${label}`;
+    },
+    () => {
+      document.getElementById('loc-status').textContent =
+        'GPS denied or unavailable — type an address instead.';
+    },
+    { timeout: 10000, enableHighAccuracy: false }
+  );
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
+    );
+    const d = await r.json();
+    return d.display_name
+      ? d.display_name.split(',').slice(0, 3).join(', ')
+      : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch {
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
+}
+
+function onAddrInput(val) {
+  clearTimeout(addrDebounce);
+  if (val.length < 3) {
+    document.getElementById('suggestion-list').style.display = 'none';
+    return;
+  }
+  addrDebounce = setTimeout(() => fetchSuggestions(val), 400);
+}
+
+function showSuggestions() {
+  const val = document.getElementById('addr-input').value;
+  if (val.length >= 3) fetchSuggestions(val);
+}
+
+async function geocodeAddress() {
+  const q = document.getElementById('addr-input').value.trim();
+  if (q.length >= 2) fetchSuggestions(q);
+}
+
+async function fetchSuggestions(q) {
+  try {
+    const r = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
+    );
+    const results = await r.json();
+    const list = document.getElementById('suggestion-list');
+
+    if (!results.length) { list.style.display = 'none'; return; }
+
+    list.innerHTML = '';
+    results.forEach(res => {
+      const label = res.display_name.split(',').slice(0, 4).join(', ');
+      const item  = document.createElement('div');
+      item.className = 'suggestion-item';
+      item.textContent = label;
+      item.addEventListener('click', () => {
+        document.getElementById('addr-input').value = label;
+        pendingCoords = { lat: parseFloat(res.lat), lng: parseFloat(res.lon), label };
+        document.getElementById('confirm-loc-btn').disabled = false;
+        document.getElementById('loc-status').textContent = `📍 ${label}`;
+        list.style.display = 'none';
+      });
+      list.appendChild(item);
+    });
+    list.style.display = 'block';
+  } catch (e) {
+    console.warn('fetchSuggestions failed', e);
+  }
+}
+
+async function setMyLocation() {
+  if (!pendingCoords) return;
+  myCoords = pendingCoords;
+  document.getElementById('loc-status').textContent = `✓ Set: ${myCoords.label}`;
+  document.getElementById('confirm-loc-btn').disabled = true;
+  await pushMyUser();
+  showToast('Location saved!');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  OVERPASS PLACE SEARCH
+// ─────────────────────────────────────────────────────────────
+async function searchPlaces() {
+  if (!sessionData) return;
+  const located = sessionData.users.filter(u => u.coords);
+  if (located.length < 2) return;
+
+  const mid = calcMidpoint(located.map(u => u.coords));
+
+  const selectedCats = CATEGORIES.filter(c => activeFilters.has(c.id));
+  if (!selectedCats.length) {
+    showToast('Select at least one category first');
+    return;
+  }
+
+  const loadingEl = document.getElementById('map-loading');
+  loadingEl.style.display = 'flex';
+
+  // Build Overpass QL query — one node clause per category
+  const nodeClauses = selectedCats.map(cat =>
+    `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
+  ).join('\n');
+
+  const overpassQuery = `[out:json][timeout:20];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
+
+  try {
+    const r = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(overpassQuery)
+    });
+    const data = await r.json();
+
+    const allPlaces = (data.elements || [])
+      .filter(el => el.tags && el.tags.name)
+      .map(el => {
+        const dist = Math.round(haversine(mid.lat, mid.lng, el.lat, el.lon));
+        const cat  = selectedCats.find(c => {
+          const vals = c.query.split('|');
+          return vals.some(v => el.tags[c.osmKey] === v);
+        });
+        return {
+          id:      el.id.toString(),
+          name:    el.tags.name,
+          type:    el.tags.amenity || el.tags.leisure || el.tags.tourism || '',
+          lat:     el.lat,
+          lng:     el.lon,
+          dist,
+          cat:     cat ? cat.id   : 'other',
+          catIcon: cat ? cat.icon : '📍',
+          addr:    [el.tags['addr:street'], el.tags['addr:housenumber']].filter(Boolean).join(' '),
+          url:     el.tags.website || el.tags['contact:website'] || '',
+        };
+      })
+      .sort((a, b) => a.dist - b.dist);
+
+    // Keep at most 5 results per category, then re-sort by distance
+    const perCatCount = {};
+    const places = allPlaces
+      .filter(p => {
+        perCatCount[p.cat] = (perCatCount[p.cat] || 0) + 1;
+        return perCatCount[p.cat] <= 5;
+      })
+      .sort((a, b) => a.dist - b.dist);
+
+    const po = {};
+    places.forEach(p => { po[p.id] = p; });
+    await fbSet(sessionPath('places'), po);
+
+    fsqCache = {};
+    renderPlaces(places, sessionData?.votes || {});
+    addPlaceMarkersToMap(places, mid);
+    showToast(`Found ${places.length} place${places.length !== 1 ? 's' : ''} near the midpoint`);
+    enrichWithFoursquare(places);
+  } catch (e) {
+    showToast('Could not fetch places — check connection and retry');
+    console.error('searchPlaces failed', e);
+  } finally {
+    loadingEl.style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  VOTING
+// ─────────────────────────────────────────────────────────────
+async function vote(placeId) {
+  if (lastVotedPlace) {
+    try { await fbRemove(sessionPath('votes', myUserId)); } catch (_) {}
+  }
+  lastVotedPlace = placeId;
+  try {
+    await fbSet(sessionPath('votes', myUserId), { placeId, userId: myUserId, ts: Date.now() });
+    showToast('Vote cast!');
+  } catch (e) {
+    showToast('Vote failed — try again');
+    console.error('vote failed', e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FOURSQUARE ENRICHMENT
+// ─────────────────────────────────────────────────────────────
+async function enrichWithFoursquare(places) {
+  if (!FOURSQUARE_API_KEY) return;
+  fsqEnriching = true;
+
+  await Promise.all(places.map(async p => {
+    try {
+      const venue = await fetchFsqVenue(p.name, p.lat, p.lng);
+      if (venue && venue.rating != null) {
+        fsqCache[p.id] = {
+          fsqId:        venue.fsq_id,
+          rating:       venue.rating,
+          totalRatings: venue.stats?.total_ratings || 0,
+          totalTips:    venue.stats?.total_tips    || 0,
+        };
+      } else {
+        fsqCache[p.id] = null;
+      }
+    } catch (e) {
+      fsqCache[p.id] = null;
+      console.warn('FSQ fetch failed for', p.name, e);
+    }
+  }));
+
+  fsqEnriching = false;
+
+  if (sessionData?.places) {
+    renderPlaces(sessionData.places, sessionData.votes || {});
+    const top = sessionData.places
+      .filter(p => fsqCache[p.id]?.rating)
+      .sort((a, b) => fsqWeightedScore(b.id) - fsqWeightedScore(a.id))[0];
+    if (top) showToast(`Top rated: ${top.name} — ${fsqCache[top.id].rating.toFixed(1)}/10`);
+  }
+}
+
+async function fetchFsqVenue(name, lat, lng) {
+  const params = new URLSearchParams({
+    ll:     `${lat},${lng}`,
+    query:  name,
+    limit:  1,
+    radius: 150,
+    fields: 'fsq_id,name,rating,stats',
+  });
+  const r = await fetch(`https://api.foursquare.com/v3/places/search?${params}`, {
+    headers: { Authorization: FOURSQUARE_API_KEY, Accept: 'application/json' },
+  });
+  if (!r.ok) throw new Error(`FSQ ${r.status}`);
+  const data = await r.json();
+  return data.results?.[0] ?? null;
+}
+
+async function toggleTips(placeId) {
+  const panel = document.getElementById('tips-' + placeId);
+  if (!panel) return;
+
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    return;
+  }
+  panel.classList.add('open');
+  if (panel.dataset.loaded) return;
+
+  const fsq = fsqCache[placeId];
+  if (!fsq?.fsqId || !fsq.totalTips) {
+    panel.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic;">No written reviews available.</div>';
+    panel.dataset.loaded = '1';
+    return;
+  }
+
+  panel.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0;">Loading reviews…</div>';
+
+  try {
+    const r = await fetch(
+      `https://api.foursquare.com/v3/places/${fsq.fsqId}/tips?limit=5&fields=text,agree_count`,
+      { headers: { Authorization: FOURSQUARE_API_KEY, Accept: 'application/json' } }
+    );
+    if (!r.ok) throw new Error(`FSQ tips ${r.status}`);
+    const data = await r.json();
+    const tips = data.items || [];
+
+    panel.innerHTML = tips.length
+      ? tips.map(t => `
+          <div class="tip-item">
+            <div>${escapeHtml(t.text)}</div>
+            ${t.agree_count > 0 ? `<div class="tip-agree">▲ ${t.agree_count} found helpful</div>` : ''}
+          </div>`).join('')
+      : '<div style="font-size:11px;color:var(--muted);padding:4px 0;font-style:italic;">No written reviews yet.</div>';
+    panel.dataset.loaded = '1';
+  } catch (e) {
+    panel.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:4px 0;">Could not load reviews.</div>';
+    console.warn('toggleTips failed', e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────────────────────
+function copyCode() {
+  navigator.clipboard.writeText(sessionId)
+    .then(() => showToast('Code copied to clipboard!'))
+    .catch(() => showToast('Code: ' + sessionId));
+}
+
+// Minimal XSS protection for user-supplied strings in innerHTML
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// Close autocomplete when clicking elsewhere
+document.addEventListener('click', e => {
+  const input = document.getElementById('addr-input');
+  const list  = document.getElementById('suggestion-list');
+  if (input && list && !input.contains(e.target) && !list.contains(e.target)) {
+    list.style.display = 'none';
+  }
+});
