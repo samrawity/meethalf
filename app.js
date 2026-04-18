@@ -274,7 +274,7 @@ function listenToSession() {
     updateSheetSummary();
     const count = users.length;
     document.getElementById('online-count').textContent = count + ' user' + (count !== 1 ? 's' : '');
-    document.getElementById('status-text').textContent = `En ligne · ${count} participant${count !== 1 ? 's' : ''}`;
+    document.getElementById('status-text').textContent = `Online · ${count} participant${count !== 1 ? 's' : ''}`;
   };
   fbRef.on('value', handler);
   sessionUnsub = () => fbRef.off('value', handler);
@@ -603,10 +603,10 @@ async function searchPlaces() {
 
   // Build Overpass QL query — one node clause per category
   const nodeClauses = selectedCats.map(cat =>
-    `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
+    `nwr["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`
   ).join('\n');
 
-  const overpassQuery = `[out:json][timeout:15];(\n${nodeClauses}\n);out body ${MAX_PLACES * 3};`;
+  const overpassQuery = `[out:json][timeout:15];(\n${nodeClauses}\n);out center ${MAX_PLACES * 3};`;
 
   const OVERPASS_ENDPOINTS = [
     'https://overpass-api.de/api/interpreter',
@@ -642,7 +642,10 @@ async function searchPlaces() {
     const allPlaces = (data.elements || [])
       .filter(el => el.tags && el.tags.name)
       .map(el => {
-        const dist = Math.round(haversine(mid.lat, mid.lng, el.lat, el.lon));
+        const lat  = el.lat ?? el.center?.lat;
+        const lon  = el.lon ?? el.center?.lon;
+        if (!lat || !lon) return null;
+        const dist = Math.round(haversine(mid.lat, mid.lng, lat, lon));
         const cat  = selectedCats.find(c => {
           const vals = c.query.split('|');
           return vals.some(v => el.tags[c.osmKey] === v);
@@ -651,8 +654,8 @@ async function searchPlaces() {
           id:      el.id.toString(),
           name:    el.tags.name,
           type:    el.tags.amenity || el.tags.leisure || el.tags.tourism || '',
-          lat:     el.lat,
-          lng:     el.lon,
+          lat,
+          lng:     lon,
           dist,
           cat:     cat ? cat.id   : 'other',
           catIcon: cat ? cat.icon : '📍',
@@ -660,6 +663,7 @@ async function searchPlaces() {
           url:     el.tags.website || el.tags['contact:website'] || '',
         };
       })
+      .filter(Boolean)
       .sort((a, b) => a.dist - b.dist);
 
     // Keep at most 5 results per category, then re-sort by distance
