@@ -362,6 +362,13 @@ function renderPlaces(places, votes) {
     const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
     const pct      = v ? Math.round((v / maxVotes) * 100) : 0;
 
+    const extraInfo = [
+      p.hours ? `<span class="place-info-item">🕐 ${escapeHtml(p.hours)}</span>` : '',
+      p.phone ? `<span class="place-info-item">📞 <a href="tel:${escapeHtml(p.phone)}">${escapeHtml(p.phone)}</a></span>` : '',
+      p.price ? `<span class="place-info-item">💰 ${escapeHtml(p.price)}</span>` : '',
+      p.url   ? `<span class="place-info-item">🔗 <a href="${escapeHtml(p.url)}" target="_blank">Website</a></span>` : '',
+    ].filter(Boolean).join('');
+
     const card = document.createElement('div');
     card.className = 'place-card' + (hasVoted ? ' voted' : '') + (isWinner ? ' winner' : '');
     card.innerHTML = `
@@ -369,6 +376,7 @@ function renderPlaces(places, votes) {
       <div class="place-name">${p.catIcon} ${escapeHtml(p.name)}</div>
       <div class="place-meta">${escapeHtml(p.type.replace(/_/g, ' '))}${p.addr ? ' · ' + escapeHtml(p.addr) : ''}</div>
       <div class="place-dist">${distStr} from midpoint</div>
+      ${extraInfo ? `<div class="place-extra">${extraInfo}</div>` : ''}
       <div class="vote-row">
         <button class="btn sm ${hasVoted ? 'primary' : ''}" data-id="${p.id}" onclick="vote('${p.id}')">
           ${hasVoted ? '✓ Voted' : 'Vote'}
@@ -463,7 +471,12 @@ function addPlaceMarkersToMap(places, mid) {
 
     const distStr = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
     const osmUrl = `https://www.openstreetmap.org/node/${p.id}`;
-    const links  = [
+    const popupDetails = [
+      p.hours ? `🕐 ${p.hours}` : null,
+      p.phone ? `📞 <a href="tel:${p.phone}">${p.phone}</a>` : null,
+      p.price ? `💰 ${p.price}` : null,
+    ].filter(Boolean).map(d => `<div>${d}</div>`).join('');
+    const links = [
       p.url ? `<a href="${p.url}" target="_blank">Website</a>` : null,
               `<a href="${osmUrl}" target="_blank">OpenStreetMap</a>`,
     ].filter(Boolean).join(' · ');
@@ -475,6 +488,7 @@ function addPlaceMarkersToMap(places, mid) {
         <small style="font-family:DM Mono,monospace;color:#7a7870;">
           ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
         </small>
+        ${popupDetails ? `<div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;line-height:1.8;">${popupDetails}</div>` : ''}
         <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
       `);
     placeMarkers.push(m);
@@ -661,6 +675,9 @@ async function searchPlaces() {
           catIcon: cat ? cat.icon : '📍',
           addr:    [el.tags['addr:street'], el.tags['addr:housenumber']].filter(Boolean).join(' '),
           url:     el.tags.website || el.tags['contact:website'] || '',
+          phone:   el.tags.phone || el.tags['contact:phone'] || '',
+          hours:   el.tags.opening_hours || '',
+          price:   el.tags.stars || el.tags['price_range'] || el.tags['price_level'] || '',
         };
       })
       .filter(Boolean)
