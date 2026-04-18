@@ -653,6 +653,7 @@ async function searchPlaces() {
   try {
     const data = await fetchOverpass(overpassQuery);
 
+    console.log('[Overpass] elements received:', data.elements?.length ?? 0);
     const allPlaces = (data.elements || [])
       .filter(el => el.tags && el.tags.name)
       .map(el => {
@@ -682,6 +683,8 @@ async function searchPlaces() {
       })
       .filter(Boolean)
       .sort((a, b) => a.dist - b.dist);
+
+    console.log('[Overpass] named places with coords:', allPlaces.length);
 
     // Keep at most 5 results per category, then re-sort by distance
     const perCatCount = {};
