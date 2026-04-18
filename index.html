@@ -81,6 +81,12 @@
       <!-- ─── SIDEBAR ───────────────────────────────────── -->
       <div class="sidebar">
 
+        <!-- Sheet handle (visible on mobile only) -->
+        <div class="sheet-handle" onclick="togglePanel()">
+          <div class="sheet-handle-bar"></div>
+          <span class="sheet-handle-label" id="sheet-summary">Tap to open</span>
+        </div>
+
         <!-- 0 · Session Code -->
         <div class="panel">
           <div class="panel-title">
@@ -183,6 +189,11 @@
       </div>
 
     </div><!-- /main -->
+
+    <!-- FAB: toggle map/panel on mobile -->
+    <button class="fab" id="fab-btn" onclick="togglePanel()" title="Toggle panel">
+      ☰
+    </button>
 
     <div class="status-bar">
       <div class="pulse" id="pulse-dot"></div>

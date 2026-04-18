@@ -146,6 +146,7 @@ async function initSessionScreen() {
 
   buildFilters();
   initMap();
+  setTimeout(() => { if (map) map.invalidateSize(); }, 50);
 
   mapFitted = false;
   await pushMyUser();
@@ -153,10 +154,43 @@ async function initSessionScreen() {
   listenToSession();
 }
 
+// ─────────────────────────────────────────────────────────────
+//  MOBILE PANEL TOGGLE
+// ─────────────────────────────────────────────────────────────
+function togglePanel() {
+  const sidebar = document.querySelector('.sidebar');
+  const fab     = document.getElementById('fab-btn');
+  const isOpen  = sidebar.classList.toggle('is-open');
+  if (fab) fab.textContent = isOpen ? '✕' : '☰';
+  // Let the CSS transition finish before recalculating map size
+  setTimeout(() => { if (map) map.invalidateSize(); }, 360);
+}
+
+function updateSheetSummary() {
+  const el = document.getElementById('sheet-summary');
+  if (!el) return;
+  const users  = sessionData ? Object.values(sessionData.users  || {}) : [];
+  const places = sessionData ? Object.values(sessionData.places || {}) : [];
+  const withLoc = users.filter(u => u.coords).length;
+  if (places.length) {
+    el.textContent = `${places.length} place${places.length > 1 ? 's' : ''} found · ${withLoc}/${users.length} ready`;
+  } else if (users.length) {
+    el.textContent = `${withLoc}/${users.length} location${users.length > 1 ? 's' : ''} shared`;
+  } else {
+    el.textContent = 'Tap to open';
+  }
+}
+
 function leaveSession() {
   clearInterval(heartbeatInterval);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+
+  // Close the bottom sheet if open
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) sidebar.classList.remove('is-open');
+  const fab = document.getElementById('fab-btn');
+  if (fab) fab.textContent = '☰';
 
   // Cancel the server-side onDisconnect handler and remove the user entry immediately.
   if (sessionId && myUserId) {
@@ -238,6 +272,7 @@ function listenToSession() {
     if (places) renderPlaces(places, votes);
     updateMapMarkers(users);
     updateSearchBtn(users);
+    updateSheetSummary();
     const count = users.length;
     document.getElementById('online-count').textContent = count + ' user' + (count !== 1 ? 's' : '');
     document.getElementById('status-text').textContent = `En ligne · ${count} participant${count !== 1 ? 's' : ''}`;
