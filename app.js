@@ -121,6 +121,7 @@ function createSession() {
   myName    = name;
   myUserId  = genUserId();
   sessionId = genCode();
+  history.pushState({ sessionId }, '', '/join/' + sessionId);
   initSessionScreen();
 }
 
@@ -131,6 +132,7 @@ function joinSession() {
   myName    = name;
   myUserId  = genUserId();
   sessionId = code;
+  history.pushState({ sessionId }, '', '/join/' + sessionId);
   initSessionScreen();
 }
 
@@ -185,6 +187,8 @@ function leaveSession() {
   clearInterval(heartbeatInterval);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   if (sessionUnsub) { sessionUnsub(); sessionUnsub = null; }
+
+  history.pushState({}, '', '/');
 
   // Close the bottom sheet if open
   const sidebar = document.querySelector('.sidebar');
@@ -848,4 +852,26 @@ document.addEventListener('click', e => {
   if (input && list && !input.contains(e.target) && !list.contains(e.target)) {
     list.style.display = 'none';
   }
+});
+
+// ─────────────────────────────────────────────────────────────
+//  URL-BASED SESSION DETECTION
+//  Handles direct links: meethalf.app/join/ABC123
+// ─────────────────────────────────────────────────────────────
+(function detectSessionFromUrl() {
+  const match = location.pathname.match(/^\/join\/([A-Z0-9]{4,8})$/i);
+  if (!match) return;
+  const code = match[1].toUpperCase();
+  // Pre-fill the join code and focus the name field
+  const codeInput = document.getElementById('join-code-input');
+  const nameInput = document.getElementById('user-name-input');
+  if (codeInput) codeInput.value = code;
+  if (nameInput) nameInput.focus();
+  // Normalise the URL casing without adding a history entry
+  history.replaceState({}, '', '/join/' + code);
+})();
+
+// Handle browser back/forward navigation
+window.addEventListener('popstate', () => {
+  if (sessionId) leaveSession();
 });
