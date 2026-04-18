@@ -636,13 +636,22 @@ async function searchPlaces() {
 
     const attempt = async (endpoint, i) => {
       const timeout = setTimeout(() => controllers[i].abort(), 20000);
-      const r = await fetch(endpoint, { method: 'POST', body, signal: controllers[i].signal });
-      if (!r.ok) throw new Error(r.status);
-      const data = await r.json();
-      clearTimeout(timeout);
-      console.log('[Overpass] winner:', endpoint, '| elements:', data.elements?.length ?? 0, data.remark || '');
-      controllers.forEach((c, j) => { if (j !== i) c.abort(); });
-      return data;
+      try {
+        const r = await fetch(endpoint, { method: 'POST', body, signal: controllers[i].signal });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('json')) throw new Error(`Non-JSON response (${ct}) — likely rate-limited`);
+        const data = await r.json();
+        if (!Array.isArray(data.elements)) throw new Error('Missing elements array');
+        clearTimeout(timeout);
+        console.log('[Overpass] winner:', endpoint, '| elements:', data.elements.length, data.remark || '');
+        controllers.forEach((c, j) => { if (j !== i) c.abort(); });
+        return data;
+      } catch (e) {
+        clearTimeout(timeout);
+        console.warn('[Overpass] failed:', endpoint, e.message);
+        throw e;
+      }
     };
 
     try {
