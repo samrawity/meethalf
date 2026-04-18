@@ -647,7 +647,7 @@ async function searchPlaces() {
         return data;
       } catch (e) {
         clearTimeout(timeout);
-        console.warn('[Overpass] failed:', endpoint, e.message);
+        if (e.name !== 'AbortError') console.warn('[Overpass] failed:', endpoint, e.message);
         throw e;
       }
     };
