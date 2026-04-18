@@ -640,6 +640,7 @@ async function searchPlaces() {
       if (!r.ok) throw new Error(r.status);
       const data = await r.json();
       clearTimeout(timeout);
+      console.log('[Overpass] winner:', endpoint, '| elements:', data.elements?.length ?? 0, data.remark || '');
       controllers.forEach((c, j) => { if (j !== i) c.abort(); });
       return data;
     };
@@ -651,6 +652,7 @@ async function searchPlaces() {
     }
   }
 
+  console.log('[Overpass] query:', overpassQuery);
   try {
     const data = await fetchOverpass(overpassQuery);
 
