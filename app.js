@@ -17,8 +17,8 @@ const CATEGORIES = [
   // { id: 'hotel', label: 'Hotel', icon: '🏨', query: 'hotel|hostel', osmKey: 'tourism' },
 ];
 
-// Overpass search radius in metres around the midpoint
-const SEARCH_RADIUS = 1500;
+// Overpass search radius in metres around the midpoint (adjustable via slider)
+let searchRadius = 1500;
 
 // Max places to display from Overpass results
 const MAX_PLACES = 10;
@@ -46,6 +46,7 @@ let lastVotedPlace = null;  // placeId the current user voted for
 let heartbeatInterval = null;
 let sessionUnsub  = null;
 let mapFitted     = false;
+let radiusCircle  = null;
 
 // ─────────────────────────────────────────────────────────────
 //  STORAGE
@@ -106,6 +107,38 @@ function initMap(center = [48.8566, 2.3522]) {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(map);
+}
+
+function updateRadiusCircle() {
+  if (!map) return;
+  const located = sessionData ? sessionData.users.filter(u => u.coords) : [];
+  if (located.length < 2) {
+    if (radiusCircle) { radiusCircle.remove(); radiusCircle = null; }
+    return;
+  }
+  const mid = calcMidpoint(located.map(u => u.coords));
+  if (radiusCircle) {
+    radiusCircle.setLatLng([mid.lat, mid.lng]);
+    radiusCircle.setRadius(searchRadius);
+  } else {
+    radiusCircle = L.circle([mid.lat, mid.lng], {
+      radius: searchRadius,
+      color: '#c84a1e',
+      weight: 1.5,
+      opacity: 0.7,
+      fillColor: '#c84a1e',
+      fillOpacity: 0.07,
+      dashArray: '5 5',
+    }).addTo(map);
+  }
+}
+
+function onRadiusChange(val) {
+  searchRadius = parseInt(val, 10);
+  document.getElementById('radius-value').textContent = searchRadius >= 1000
+    ? (searchRadius / 1000).toFixed(1) + ' km'
+    : searchRadius + ' m';
+  updateRadiusCircle();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -214,6 +247,7 @@ function leaveSession() {
   placeMarkers.forEach(m => m.remove());
   placeMarkers = [];
   if (midpointMarker) { midpointMarker.remove(); midpointMarker = null; }
+  if (radiusCircle)   { radiusCircle.remove();   radiusCircle = null; }
 
   // Reset UI
   document.getElementById('screen-session').classList.remove('active');
@@ -450,6 +484,7 @@ function updateMapMarkers(users) {
       mapFitted = true;
     }
   }
+  updateRadiusCircle();
 }
 
 function addPlaceMarkersToMap(places, mid) {
@@ -617,8 +652,8 @@ async function searchPlaces() {
 
   // Build Overpass QL query — one node clause per category
   const clauses = selectedCats.flatMap(cat => [
-    `node["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`,
-    `way["${cat.osmKey}"~"${cat.query}"](around:${SEARCH_RADIUS},${mid.lat},${mid.lng});`,
+    `node["${cat.osmKey}"~"${cat.query}"](around:${searchRadius},${mid.lat},${mid.lng});`,
+    `way["${cat.osmKey}"~"${cat.query}"](around:${searchRadius},${mid.lat},${mid.lng});`,
   ]).join('\n');
 
   const overpassQuery = `[out:json][timeout:25];(\n${clauses}\n);out body center ${MAX_PLACES * 5};`;

@@ -244,6 +244,64 @@ input:focus, select:focus { border-color: var(--ink); }
 .filter-tag.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .filter-tag .icon { font-size: 14px; }
 
+/* ─── RADIUS SLIDER ─────────────────────────────────────── */
+.radius-row {
+  margin: 8px 0 4px;
+}
+.radius-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.radius-label span {
+  color: var(--ink);
+  font-weight: 600;
+}
+#radius-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  outline: none;
+  border-radius: 2px;
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+#radius-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--paper);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+#radius-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--paper);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  cursor: pointer;
+}
+.radius-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
 /* ─── PLACE CARDS ────────────────────────────────────────── */
 .place-list { display: flex; flex-direction: column; gap: 6px; }
 
