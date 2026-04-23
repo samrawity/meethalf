@@ -35,16 +35,15 @@
   <div class="screen active welcome-screen" id="screen-welcome">
 
     <div class="welcome-hero">
-      <h1 class="hero-title">Meet<em>Half</em><br/>way.</h1>
+      <h1 class="hero-title">Pick a spot<br/><em>everyone</em> can reach.</h1>
       <p class="hero-sub">
-        Find the perfect spot between you and your friends.
-        No accounts, no faff — just a six-character code.
+        Share a code, drop your location, vote on a place — done in 60 seconds.
       </p>
       <div class="tagline-pills">
         <span class="pill">Free forever</span>
         <span class="pill">No account needed</span>
         <span class="pill">Real-time sync</span>
-        <span class="pill">Open map data</span>
+        <span class="pill">Privacy-first</span>
       </div>
     </div>
 
@@ -61,7 +60,7 @@
             <input type="text" id="name-start" placeholder="e.g. Sophie" maxlength="20"
               onkeydown="if(event.key==='Enter') createSession()" />
           </div>
-          <button class="btn full" onclick="createSession()">Create session →</button>
+          <button class="btn full" onclick="createSession()">Start a session →</button>
         </div>
         <button class="card-cta" onclick="expandCard('start')">Get started →</button>
       </div>
@@ -83,7 +82,7 @@
               oninput="this.value=this.value.toUpperCase()"
               onkeydown="if(event.key==='Enter') joinSession()" />
           </div>
-          <button class="btn primary full" onclick="joinSession()">Join session →</button>
+          <button class="btn primary full" onclick="joinSession()">Join with a code →</button>
         </div>
         <button class="card-cta" onclick="expandCard('join')">Enter code →</button>
       </div>
@@ -91,7 +90,8 @@
     </div>
 
     <p class="welcome-note">
-      Your location is never required — type an address or share GPS, your call.
+      No account, no personal data, no location stored beyond the session.
+      We collect anonymous usage patterns to improve the experience — nothing that identifies you.
     </p>
 
   </div>
@@ -207,7 +207,7 @@
           </div>
           <button class="btn primary full" id="search-btn"
             onclick="searchPlaces()" disabled>
-            Find midpoint places
+            Find places nearby
           </button>
         </div>
 

@@ -198,7 +198,7 @@ function createSession() {
 function joinSession() {
   const code = document.getElementById('join-code-input').value.trim().toUpperCase();
   const name = document.getElementById('name-join').value.trim() || 'Anonymous';
-  if (!code || code.length < 4) { showToast('Enter a valid session code'); return; }
+  if (!code || code.length < 4) { showToast('Please enter a valid 6-character code'); return; }
   myName    = name;
   localStorage.setItem('meethalf_name', name);
   myUserId  = genUserId();
@@ -248,7 +248,7 @@ function updateSheetSummary() {
   if (places.length) {
     el.textContent = `${places.length} place${places.length > 1 ? 's' : ''} found · ${withLoc}/${users.length} ready`;
   } else if (users.length) {
-    el.textContent = `${withLoc}/${users.length} location${users.length > 1 ? 's' : ''} shared`;
+    el.textContent = `${withLoc} of ${users.length} location${users.length > 1 ? 's' : ''} shared`;
   } else {
     el.textContent = 'Tap to open';
   }
@@ -296,9 +296,9 @@ function leaveSession() {
   document.getElementById('addr-input').value = '';
   document.getElementById('loc-status').textContent = '';
   document.getElementById('place-list').innerHTML =
-    '<div class="empty-state">Search for places to see results here.</div>';
+    '<div class="empty-state">Hit "Find places nearby" once everyone has dropped their location.</div>';
   document.getElementById('user-list').innerHTML =
-    '<div class="empty-state">Waiting for participants…</div>';
+    '<div class="empty-state">Waiting for people to join…</div>';
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -348,8 +348,8 @@ function listenToSession() {
     updateSearchBtn(users);
     updateSheetSummary();
     const count = users.length;
-    document.getElementById('online-count').textContent = count + ' user' + (count !== 1 ? 's' : '');
-    document.getElementById('status-text').textContent = `Online · ${count} participant${count !== 1 ? 's' : ''}`;
+    document.getElementById('online-count').textContent = count + ' person' + (count !== 1 ? 's' : '');
+    document.getElementById('status-text').textContent = `Online · ${count} ${count !== 1 ? 'people' : 'person'} connected`;
   };
   fbRef.on('value', handler);
   sessionUnsub = () => fbRef.off('value', handler);
@@ -361,7 +361,7 @@ function listenToSession() {
 function renderUsers(users) {
   const list = document.getElementById('user-list');
   if (!users.length) {
-    list.innerHTML = '<div class="empty-state">Waiting for participants…</div>';
+    list.innerHTML = '<div class="empty-state">Waiting for people to join…</div>';
     return;
   }
   list.innerHTML = '';
@@ -386,9 +386,9 @@ function updateSearchBtn(users) {
   btn.disabled = located < 2;
   if (located < 2) {
     const needed = 2 - located;
-    btn.textContent = `Need ${needed} more participant${needed !== 1 ? 's' : ''} to search`;
+    btn.textContent = `Waiting for ${needed} more ${needed !== 1 ? 'people' : 'person'} to share their location`;
   } else {
-    btn.textContent = `Find midpoint places (${located} locations)`;
+    btn.textContent = `Find places nearby (${located} locations)`;
   }
 }
 
@@ -416,7 +416,7 @@ function buildFilters() {
 function renderPlaces(places, votes) {
   const list = document.getElementById('place-list');
   if (!places || !places.length) {
-    list.innerHTML = '<div class="empty-state">No places found. Try different filters or a wider search.</div>';
+    list.innerHTML = '<div class="empty-state">Nothing found nearby — try different filters or a wider search radius.</div>';
     return;
   }
 
@@ -576,10 +576,10 @@ function addPlaceMarkersToMap(places, mid) {
 // ─────────────────────────────────────────────────────────────
 function useGPS() {
   if (!navigator.geolocation) {
-    showToast('GPS not available in this browser');
+    showToast('GPS isn\'t available in this browser — try typing your address instead');
     return;
   }
-  document.getElementById('loc-status').textContent = 'Acquiring GPS…';
+  document.getElementById('loc-status').textContent = 'Finding your location…';
   navigator.geolocation.getCurrentPosition(
     async pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
@@ -591,7 +591,7 @@ function useGPS() {
     },
     err => {
       document.getElementById('loc-status').textContent =
-        'GPS denied or unavailable — type an address instead.';
+        'Couldn\'t get your GPS — just type your address above.';
       captureApiError(new Error('Geolocation failed'), 'geolocation', {
         error_code: err.code,
         error_message: err.message,
@@ -675,7 +675,7 @@ async function setMyLocation() {
   document.getElementById('loc-status').textContent = `✓ Set: ${myCoords.label}`;
   document.getElementById('confirm-loc-btn').disabled = true;
   await pushMyUser();
-  showToast('Location saved!');
+  showToast('Got it, you\'re on the map!');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -690,7 +690,7 @@ async function searchPlaces() {
 
   const selectedCats = CATEGORIES.filter(c => activeFilters.has(c.id));
   if (!selectedCats.length) {
-    showToast('Select at least one category first');
+    showToast('Pick at least one category to search');
     return;
   }
 
@@ -808,9 +808,9 @@ async function searchPlaces() {
 
     renderPlaces(places, sessionData?.votes || {});
     addPlaceMarkersToMap(places, mid);
-    showToast(`Found ${places.length} place${places.length !== 1 ? 's' : ''} near the midpoint`);
+    showToast(`Found ${places.length} place${places.length !== 1 ? 's' : ''} — take a look!`);
   } catch (e) {
-    showToast('Could not fetch places — check connection and retry');
+    showToast('Something went wrong fetching places — check your connection and try again');
     console.error('searchPlaces failed', e);
     captureApiError(e, 'overpass', {
       radius_m: searchRadius,
@@ -833,9 +833,9 @@ async function vote(placeId) {
   lastVotedPlace = placeId;
   try {
     await fbSet(sessionPath('votes', myUserId), { placeId, userId: myUserId, ts: Date.now() });
-    showToast('Vote cast!');
+    showToast('Voted!');
   } catch (e) {
-    showToast('Vote failed — try again');
+    showToast('Couldn\'t save your vote — please try again');
     console.error('vote failed', e);
   }
 }
@@ -847,7 +847,7 @@ async function vote(placeId) {
 function copyCode() {
   const url = location.origin + location.pathname + '?s=' + sessionId;
   navigator.clipboard.writeText(url)
-    .then(() => showToast('Link copied to clipboard!'))
+    .then(() => showToast('Link copied — send it to your group!'))
     .catch(() => showToast(url));
 }
 
