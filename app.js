@@ -429,10 +429,15 @@ function renderPlaces(places, votes) {
     return a.dist - b.dist;
   });
 
+  // Determine if top place has a clear majority (more votes than all others combined)
+  const topVotes   = votes[sorted[0].id] || 0;
+  const otherVotes = sorted.slice(1).reduce((sum, p) => sum + (votes[p.id] || 0), 0);
+  const hasWinner  = topVotes > 0 && topVotes > otherVotes;
+
   list.innerHTML = '';
   sorted.forEach((p, i) => {
     const v        = votes[p.id] || 0;
-    const isWinner = i === 0 && v > 0;
+    const isWinner = i === 0 && hasWinner;
     const hasVoted = lastVotedPlace === p.id;
     const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
     const pct      = v ? Math.round((v / maxVotes) * 100) : 0;
@@ -467,7 +472,42 @@ function renderPlaces(places, votes) {
       map.setView([p.lat, p.lng], 17);
     });
     list.appendChild(card);
+
+    if (isWinner) {
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'btn full share-btn';
+      shareBtn.textContent = 'Share the result';
+      shareBtn.addEventListener('click', () => shareResult(p));
+      list.appendChild(shareBtn);
+    }
   });
+}
+
+async function shareResult(place) {
+  const mapsUrl  = `https://maps.google.com/?q=${place.lat},${place.lng}`;
+  const appUrl   = location.origin + location.pathname + (sessionId ? '?s=' + sessionId : '');
+  const summary  = [
+    `We're meeting at ${place.name}`,
+    place.addr ? place.addr : null,
+    mapsUrl,
+    `Found with MeetHalf — ${appUrl}`,
+  ].filter(Boolean).join('\n');
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: `Meeting at ${place.name}`, text: summary });
+    } catch (e) {
+      if (e.name !== 'AbortError') showToast('Couldn\'t open share sheet — link copied instead');
+      else return;
+    }
+  } else {
+    try {
+      await navigator.clipboard.writeText(summary);
+      showToast('Result copied — paste it anywhere!');
+    } catch {
+      showToast(summary, 6000);
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

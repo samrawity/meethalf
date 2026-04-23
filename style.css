@@ -244,6 +244,18 @@ input:focus, select:focus { border-color: var(--ink); }
 .filter-tag.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .filter-tag .icon { font-size: 14px; }
 
+/* ─── SHARE BUTTON ──────────────────────────────────────── */
+.share-btn {
+  background: var(--accent2);
+  color: white;
+  border-color: var(--accent2);
+  margin-top: 2px;
+}
+.share-btn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
 /* ─── RADIUS SLIDER ─────────────────────────────────────── */
 .radius-row {
   margin: 8px 0 4px;
