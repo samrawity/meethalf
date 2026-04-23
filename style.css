@@ -244,6 +244,53 @@ input:focus, select:focus { border-color: var(--ink); }
 .filter-tag.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .filter-tag .icon { font-size: 14px; }
 
+/* ─── RESULT PANEL ──────────────────────────────────────── */
+.result-card {
+  border: 2px solid var(--accent2);
+  background: #f0faf5;
+  padding: 1.1rem 1.2rem;
+  margin-bottom: 8px;
+}
+
+.result-name {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin-bottom: 3px;
+}
+
+.result-addr {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.result-dist {
+  font-size: 11px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.result-votes {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.result-maps-btn {
+  text-decoration: none;
+  display: flex;
+}
+
+.result-timestamp {
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+  margin-top: 4px;
+}
+
 /* ─── SHARE BUTTON ──────────────────────────────────────── */
 .share-btn {
   background: var(--accent2);

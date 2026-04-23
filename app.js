@@ -295,8 +295,13 @@ function leaveSession() {
   document.getElementById('screen-welcome').classList.add('active');
   document.getElementById('addr-input').value = '';
   document.getElementById('loc-status').textContent = '';
+  document.getElementById('place-list').style.display = '';
   document.getElementById('place-list').innerHTML =
     '<div class="empty-state">Hit "Find places nearby" once everyone has dropped their location.</div>';
+  document.getElementById('result-panel-content').style.display = 'none';
+  document.getElementById('result-panel-content').innerHTML = '';
+  document.getElementById('results-panel-step').textContent = 'Step 4';
+  document.getElementById('results-panel-heading').textContent = 'Vote for a place';
   document.getElementById('user-list').innerHTML =
     '<div class="empty-state">Waiting for people to join…</div>';
 }
@@ -341,9 +346,14 @@ function listenToSession() {
     Object.values(data.votes || {}).forEach(v => {
       if (v && v.placeId) votes[v.placeId] = (votes[v.placeId] || 0) + 1;
     });
-    sessionData = { users, places, votes };
+    sessionData = { users, places, votes, summary: data.summary || null };
     renderUsers(users);
-    if (places) renderPlaces(places, votes);
+    if (data.summary) {
+      renderResult(data.summary);
+    } else if (places) {
+      renderPlaces(places, votes);
+      maybeWriteSummary(places, votes, users);
+    }
     updateMapMarkers(users);
     updateSearchBtn(users);
     updateSheetSummary();
@@ -508,6 +518,75 @@ async function shareResult(place) {
       showToast(summary, 6000);
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SESSION SUMMARY — write & render
+// ─────────────────────────────────────────────────────────────
+
+// Called after every vote update. Writes summary to Firebase once a clear
+// winner exists (≥2 votes, strictly more than all others combined).
+// Idempotent: if summary already exists in Firebase, the listener skips this.
+async function maybeWriteSummary(places, votes, users) {
+  if (!places || !places.length) return;
+
+  const sorted    = [...places].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0));
+  const winner    = sorted[0];
+  const topVotes  = votes[winner.id] || 0;
+  const otherVotes = sorted.slice(1).reduce((s, p) => s + (votes[p.id] || 0), 0);
+  if (topVotes < 2 || topVotes <= otherVotes) return;
+
+  const mapsUrl = `https://maps.google.com/?q=${winner.lat},${winner.lng}`;
+  const voteBreakdown = {};
+  sorted.forEach(p => { if (votes[p.id]) voteBreakdown[p.name] = votes[p.id]; });
+
+  const summary = {
+    placeName:        winner.name,
+    placeAddr:        winner.addr || '',
+    lat:              winner.lat,
+    lng:              winner.lng,
+    mapsUrl,
+    distFromMidpoint: winner.dist,
+    participantCount: users.length,
+    voteBreakdown,
+    timestamp:        Date.now(),
+  };
+
+  try {
+    await fbSet(sessionPath('summary'), summary);
+  } catch (e) {
+    console.warn('Could not write session summary', e);
+  }
+}
+
+function renderResult(summary) {
+  // Switch panel heading
+  document.getElementById('results-panel-step').textContent = 'Result';
+  document.getElementById('results-panel-heading').textContent = 'We have a winner';
+
+  // Hide vote list, show result content
+  document.getElementById('place-list').style.display = 'none';
+  const el = document.getElementById('result-panel-content');
+  el.style.display = 'block';
+
+  const distStr = summary.distFromMidpoint < 1000
+    ? summary.distFromMidpoint + 'm'
+    : (summary.distFromMidpoint / 1000).toFixed(1) + 'km';
+
+  const topVotes = Math.max(...Object.values(summary.voteBreakdown || {}), 0);
+
+  el.innerHTML = `
+    <div class="result-card">
+      <div class="result-name">${escapeHtml(summary.placeName)}</div>
+      ${summary.placeAddr ? `<div class="result-addr">${escapeHtml(summary.placeAddr)}</div>` : ''}
+      <div class="result-dist">${distStr} from midpoint</div>
+      <div class="result-votes">${topVotes} vote${topVotes !== 1 ? 's' : ''} · ${summary.participantCount} participant${summary.participantCount !== 1 ? 's' : ''}</div>
+      <a class="btn primary full result-maps-btn" href="${escapeHtml(summary.mapsUrl)}" target="_blank" rel="noopener">
+        Open in Maps
+      </a>
+    </div>
+    <p class="result-timestamp">Decided ${new Date(summary.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+  `;
 }
 
 // ─────────────────────────────────────────────────────────────
