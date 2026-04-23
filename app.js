@@ -549,11 +549,13 @@ async function maybeWriteSummary(places, votes, users) {
     distFromMidpoint: winner.dist,
     participantCount: users.length,
     voteBreakdown,
-    timestamp:        Date.now(),
+    timestamp:        firebase.database.ServerValue.TIMESTAMP,
   };
 
   try {
-    await fbSet(sessionPath('summary'), summary);
+    // Transaction: only write if no summary exists yet, preventing timestamp drift
+    // from concurrent calls before the first write is confirmed.
+    await db.ref(sessionPath('summary')).transaction(current => current === null ? summary : undefined);
   } catch (e) {
     console.warn('Could not write session summary', e);
   }
