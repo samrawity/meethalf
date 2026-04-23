@@ -49,13 +49,46 @@ let mapFitted     = false;
 let radiusCircle  = null;
 
 // ─────────────────────────────────────────────────────────────
+//  SENTRY HELPERS
+// ─────────────────────────────────────────────────────────────
+function captureApiError(error, apiSource, context = {}) {
+  if (!window.Sentry) return;
+  Sentry.withScope(scope => {
+    scope.setTag('api_source', apiSource);
+    scope.setContext('api_call', context);
+    Sentry.captureException(error);
+  });
+}
+
+// Replace session ID in Firebase paths so session content never reaches Sentry
+function scrubPath(path) {
+  return path.replace(/sessions\/[^/]+/, 'sessions/*');
+}
+
+// ─────────────────────────────────────────────────────────────
 //  STORAGE
 // ─────────────────────────────────────────────────────────────
 function sessionPath(...parts) {
   return ['sessions', sessionId, ...parts].join('/');
 }
-async function fbSet(path, value) { await db.ref(path).set(value); }
-async function fbRemove(path)     { await db.ref(path).remove(); }
+
+async function fbSet(path, value) {
+  try {
+    await db.ref(path).set(value);
+  } catch (e) {
+    captureApiError(e, 'firebase', { operation: 'set', path: scrubPath(path) });
+    throw e;
+  }
+}
+
+async function fbRemove(path) {
+  try {
+    await db.ref(path).remove();
+  } catch (e) {
+    captureApiError(e, 'firebase', { operation: 'remove', path: scrubPath(path) });
+    throw e;
+  }
+}
 
 // ─────────────────────────────────────────────────────────────
 //  HELPERS
@@ -548,9 +581,13 @@ function useGPS() {
       document.getElementById('confirm-loc-btn').disabled = false;
       document.getElementById('loc-status').textContent = `📍 ${label}`;
     },
-    () => {
+    err => {
       document.getElementById('loc-status').textContent =
         'GPS denied or unavailable — type an address instead.';
+      captureApiError(new Error('Geolocation failed'), 'geolocation', {
+        error_code: err.code,
+        error_message: err.message,
+      });
     },
     { timeout: 10000, enableHighAccuracy: false }
   );
@@ -566,7 +603,8 @@ async function reverseGeocode(lat, lng) {
     return d.display_name
       ? d.display_name.split(',').slice(0, 3).join(', ')
       : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-  } catch {
+  } catch (e) {
+    captureApiError(e, 'nominatim', { operation: 'reverse_geocode' });
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
   }
 }
@@ -619,6 +657,7 @@ async function fetchSuggestions(q) {
     list.style.display = 'block';
   } catch (e) {
     console.warn('fetchSuggestions failed', e);
+    captureApiError(e, 'nominatim', { operation: 'autocomplete' });
   }
 }
 
@@ -670,6 +709,7 @@ async function searchPlaces() {
     const tryEndpoint = async endpoint => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
+      const t0 = Date.now();
       try {
         const r = await fetch(endpoint, { method: 'POST', body, signal: controller.signal });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -682,7 +722,15 @@ async function searchPlaces() {
         return data;
       } catch (e) {
         clearTimeout(timeout);
-        if (e.name !== 'AbortError') console.warn('[Overpass] failed:', endpoint, e.message);
+        if (e.name !== 'AbortError') {
+          console.warn('[Overpass] failed:', endpoint, e.message);
+          captureApiError(e, 'overpass', {
+            endpoint,
+            radius_m: searchRadius,
+            duration_ms: Date.now() - t0,
+            timed_out: e.name === 'AbortError',
+          });
+        }
         throw e;
       }
     };
@@ -699,6 +747,7 @@ async function searchPlaces() {
     return best.value;
   }
 
+  const searchStartTime = Date.now();
   console.log('[Overpass] query:', overpassQuery);
   try {
     const data = await fetchOverpass(overpassQuery);
@@ -755,6 +804,12 @@ async function searchPlaces() {
   } catch (e) {
     showToast('Could not fetch places — check connection and retry');
     console.error('searchPlaces failed', e);
+    captureApiError(e, 'overpass', {
+      radius_m: searchRadius,
+      categories: selectedCats.map(c => c.id),
+      duration_ms: Date.now() - searchStartTime,
+      result_count: 0,
+    });
   } finally {
     loadingEl.style.display = 'none';
   }

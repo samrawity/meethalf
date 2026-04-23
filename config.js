@@ -1,3 +1,15 @@
+// ─── SENTRY ───────────────────────────────────────────────────
+if (window.Sentry) {
+  Sentry.onLoad(function () {
+    Sentry.init({
+      environment: (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? 'development'
+        : 'production',
+      release: 'meethalf@1.0.0',
+    });
+  });
+}
+
 const firebaseConfig = {
   apiKey:            'AIzaSyDgem3Y4OkBBQSRULh0OK8bE_WoHLGy4GM',
   authDomain:        'meethalf01.firebaseapp.com',
