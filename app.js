@@ -188,9 +188,10 @@ function expandCard(which) {
 function createSession() {
   const name = document.getElementById('name-start').value.trim() || 'Anonymous';
   myName    = name;
-  localStorage.setItem('meethalf_name', name);
   myUserId  = genUserId();
   sessionId = genCode();
+  localStorage.setItem('meethalf_name', name);
+  sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId, myUserId, myName }));
   history.pushState({ sessionId }, '', '?s=' + sessionId);
   initSessionScreen();
 }
@@ -200,9 +201,10 @@ function joinSession() {
   const name = document.getElementById('name-join').value.trim() || 'Anonymous';
   if (!code || code.length < 4) { showToast('Please enter a valid 6-character code'); return; }
   myName    = name;
-  localStorage.setItem('meethalf_name', name);
   myUserId  = genUserId();
   sessionId = code;
+  localStorage.setItem('meethalf_name', name);
+  sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId, myUserId, myName }));
   history.pushState({ sessionId }, '', '?s=' + sessionId);
   initSessionScreen();
 }
@@ -273,6 +275,7 @@ function leaveSession() {
     ref.onDisconnect().cancel();
     ref.remove();
   }
+  sessionStorage.removeItem('meethalf_session');
 
   // Reset all state
   sessionId      = null;
@@ -1000,22 +1003,33 @@ document.addEventListener('click', e => {
   const upper = code.toUpperCase();
   history.replaceState({}, '', '?s=' + upper);
 
+  // Refresh recovery: restore the same userId so the Firebase entry is reused.
+  const stored = sessionStorage.getItem('meethalf_session');
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed.sessionId === upper) {
+        myName    = parsed.myName;
+        myUserId  = parsed.myUserId;
+        sessionId = upper;
+        initSessionScreen();
+        return;
+      }
+    } catch (e) { /* corrupted storage — fall through */ }
+  }
+
   const savedName = localStorage.getItem('meethalf_name');
   if (savedName) {
-    // Known user — jump straight into the session
+    // Known user arriving via a shared link — generate a fresh userId.
     myName    = savedName;
     myUserId  = genUserId();
     sessionId = upper;
+    sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId: upper, myUserId, myName }));
     initSessionScreen();
   } else {
-    // New visitor — expand join card, pre-fill code, focus name input
+    // New visitor — expand join card, pre-fill code, focus name input.
     const codeInput = document.getElementById('join-code-input');
     if (codeInput) codeInput.value = upper;
     expandCard('join');
   }
 })();
-
-// Handle browser back/forward navigation
-window.addEventListener('popstate', () => {
-  if (sessionId) leaveSession();
-});
