@@ -494,7 +494,7 @@ function renderPlaces(places, votes) {
 }
 
 async function shareResult(place) {
-  const mapsUrl  = `https://maps.google.com/?q=${place.lat},${place.lng}`;
+  const mapsUrl  = `https://maps.google.com/maps?q=${encodeURIComponent(place.name + (place.addr ? ', ' + place.addr : ''))}`;
   const appUrl   = location.origin + location.pathname + (sessionId ? '?s=' + sessionId : '');
   const summary  = [
     `We're meeting at ${place.name}`,
@@ -536,7 +536,7 @@ async function maybeWriteSummary(places, votes, users) {
   const otherVotes = sorted.slice(1).reduce((s, p) => s + (votes[p.id] || 0), 0);
   if (topVotes < 2 || topVotes <= otherVotes) return;
 
-  const mapsUrl = `https://maps.google.com/?q=${winner.lat},${winner.lng}`;
+  const mapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(winner.name + (winner.addr ? ', ' + winner.addr : ''))}`;
   const voteBreakdown = {};
   sorted.forEach(p => { if (votes[p.id]) voteBreakdown[p.name] = votes[p.id]; });
 
