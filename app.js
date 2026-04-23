@@ -177,8 +177,16 @@ function onRadiusChange(val) {
 // ─────────────────────────────────────────────────────────────
 //  SESSION LIFECYCLE
 // ─────────────────────────────────────────────────────────────
+function expandCard(which) {
+  const other = which === 'start' ? 'join' : 'start';
+  document.getElementById('card-' + which).classList.add('is-active');
+  document.getElementById('card-' + other).classList.remove('is-active');
+  const input = document.getElementById('name-' + which);
+  if (input) setTimeout(() => input.focus(), 50);
+}
+
 function createSession() {
-  const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
+  const name = document.getElementById('name-start').value.trim() || 'Anonymous';
   myName    = name;
   localStorage.setItem('meethalf_name', name);
   myUserId  = genUserId();
@@ -189,7 +197,7 @@ function createSession() {
 
 function joinSession() {
   const code = document.getElementById('join-code-input').value.trim().toUpperCase();
-  const name = document.getElementById('user-name-input').value.trim() || 'Anonymous';
+  const name = document.getElementById('name-join').value.trim() || 'Anonymous';
   if (!code || code.length < 4) { showToast('Enter a valid session code'); return; }
   myName    = name;
   localStorage.setItem('meethalf_name', name);
@@ -879,11 +887,10 @@ document.addEventListener('click', e => {
     sessionId = upper;
     initSessionScreen();
   } else {
-    // New visitor — pre-fill code and focus name input
+    // New visitor — expand join card, pre-fill code, focus name input
     const codeInput = document.getElementById('join-code-input');
-    const nameInput = document.getElementById('user-name-input');
     if (codeInput) codeInput.value = upper;
-    if (nameInput) nameInput.focus();
+    expandCard('join');
   }
 })();
 

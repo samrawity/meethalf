@@ -33,11 +33,12 @@
   <!--  WELCOME SCREEN                                         -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="screen active welcome-screen" id="screen-welcome">
-    <div class="welcome-left">
+
+    <div class="welcome-hero">
       <h1 class="hero-title">Meet<em>Half</em><br/>way.</h1>
       <p class="hero-sub">
         Find the perfect spot between you and your friends.
-        No accounts, no tracking, no faff — just a six-character code.
+        No accounts, no faff — just a six-character code.
       </p>
       <div class="tagline-pills">
         <span class="pill">Free forever</span>
@@ -46,31 +47,53 @@
         <span class="pill">Open map data</span>
       </div>
     </div>
-    <div class="welcome-right">
-      <div>
-        <label class="form-label">Your name</label>
-        <input type="text" id="user-name-input" placeholder="e.g. Sophie" maxlength="20" />
-      </div>
 
-      <div>
-        <button class="btn primary full" onclick="createSession()">Create new session</button>
+    <div class="welcome-cards">
 
-        <div class="divider"><span>or join existing</span></div>
-
-        <div class="form-group">
-          <label class="form-label">Session code</label>
-          <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6"
-            oninput="this.value=this.value.toUpperCase()"
-            onkeydown="if(event.key==='Enter') joinSession()" />
+      <!-- Start card -->
+      <div class="action-card card--dark" id="card-start">
+        <span class="card-eyebrow">Start</span>
+        <h2 class="card-title">Start a session</h2>
+        <p class="card-sub">Pick a meeting spot for your group — share a code to invite others</p>
+        <div class="card-form" id="form-start">
+          <div class="form-group">
+            <label class="form-label" for="name-start">Your name</label>
+            <input type="text" id="name-start" placeholder="e.g. Sophie" maxlength="20"
+              onkeydown="if(event.key==='Enter') createSession()" />
+          </div>
+          <button class="btn full" onclick="createSession()">Create session →</button>
         </div>
-        <button class="btn full" onclick="joinSession()">Join session →</button>
+        <button class="card-cta" onclick="expandCard('start')">Get started →</button>
       </div>
 
-      <p class="welcome-note">
-        Your location is never required — type an address or share GPS, your call.
-        Sessions sync automatically every 3 seconds via shared storage.
-      </p>
+      <!-- Join card -->
+      <div class="action-card" id="card-join">
+        <span class="card-eyebrow">Join</span>
+        <h2 class="card-title">Join a session</h2>
+        <p class="card-sub">Someone sent you a code — enter it to share your location and vote</p>
+        <div class="card-form" id="form-join">
+          <div class="form-group">
+            <label class="form-label" for="name-join">Your name</label>
+            <input type="text" id="name-join" placeholder="e.g. Sophie" maxlength="20"
+              onkeydown="if(event.key==='Enter') joinSession()" />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="join-code-input">Session code</label>
+            <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6"
+              oninput="this.value=this.value.toUpperCase()"
+              onkeydown="if(event.key==='Enter') joinSession()" />
+          </div>
+          <button class="btn primary full" onclick="joinSession()">Join session →</button>
+        </div>
+        <button class="card-cta" onclick="expandCard('join')">Enter code →</button>
+      </div>
+
     </div>
+
+    <p class="welcome-note">
+      Your location is never required — type an address or share GPS, your call.
+    </p>
+
   </div>
 
   <!-- ═══════════════════════════════════════════════════════ -->
