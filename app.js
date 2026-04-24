@@ -710,25 +710,24 @@ function addPlaceMarkersToMap(places, mid) {
       iconAnchor: [14, 14]
     });
 
-    const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
-    const osmUrl   = `https://www.openstreetmap.org/node/${p.id}`;
-    const popupUrl = safeUrl(p.url);
+    const distStr = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
+    const osmUrl  = `https://www.openstreetmap.org/node/${p.id}`;
     const popupDetails = [
-      p.hours ? `🕐 ${escapeHtml(p.hours)}` : null,
-      p.phone ? `📞 <a href="tel:${escapeHtml(p.phone)}">${escapeHtml(p.phone)}</a>` : null,
-      p.price ? `💰 ${escapeHtml(p.price)}` : null,
+      p.hours ? `🕐 ${p.hours}` : null,
+      p.phone ? `📞 <a href="tel:${p.phone}">${p.phone}</a>` : null,
+      p.price ? `💰 ${p.price}` : null,
     ].filter(Boolean).map(d => `<div>${d}</div>`).join('');
     const links = [
-      popupUrl ? `<a href="${escapeHtml(popupUrl)}" target="_blank" rel="noopener">Website</a>` : null,
-                 `<a href="${osmUrl}" target="_blank" rel="noopener">OpenStreetMap</a>`,
+      p.url ? `<a href="${p.url}" target="_blank" rel="noopener">Website</a>` : null,
+              `<a href="${osmUrl}" target="_blank" rel="noopener">OpenStreetMap</a>`,
     ].filter(Boolean).join(' · ');
 
     const m = L.marker([p.lat, p.lng], { icon })
       .addTo(map)
       .bindPopup(`
-        <strong style="font-family:Fraunces,serif;">${escapeHtml(p.name)}</strong><br>
+        <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
         <small style="font-family:DM Mono,monospace;color:#7a7870;">
-          ${escapeHtml(p.type.replace(/_/g, ' '))} · ${distStr} from midpoint
+          ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
         </small>
         ${popupDetails ? `<div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;line-height:1.8;">${popupDetails}</div>` : ''}
         <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
