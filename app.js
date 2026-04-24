@@ -21,7 +21,10 @@ const CATEGORIES = [
 let searchRadius = 1500;
 
 // Max places to display from Overpass results
-const MAX_PLACES = 10;
+const MAX_PLACES = 20;
+
+// Max participants per session
+const MAX_PARTICIPANTS = 50;
 
 // Sync interval (ms) — lower = more responsive, higher = fewer API calls
 const SYNC_INTERVAL = 3000;
@@ -243,6 +246,16 @@ async function initSessionScreen() {
   setTimeout(() => { if (map) map.invalidateSize(); }, 50);
 
   mapFitted = false;
+
+  // Participant cap: check current user count before joining.
+  const snapshot = await db.ref(sessionPath('users')).get();
+  const currentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
+  if (currentCount >= MAX_PARTICIPANTS) {
+    showToast('This session is full');
+    leaveSession();
+    return;
+  }
+
   await pushMyUser();
   startHeartbeat();
   listenToSession();
@@ -938,14 +951,15 @@ async function searchPlaces() {
 
     console.log('[Overpass] named places with coords:', allPlaces.length);
 
-    // Keep at most 5 results per category, then re-sort by distance
+    // Keep at most 5 results per category, apply global cap, then re-sort by distance
     const perCatCount = {};
     const places = allPlaces
       .filter(p => {
         perCatCount[p.cat] = (perCatCount[p.cat] || 0) + 1;
         return perCatCount[p.cat] <= 5;
       })
-      .sort((a, b) => a.dist - b.dist);
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, MAX_PLACES);
 
     const po = {};
     places.forEach(p => { po[p.id] = p; });
