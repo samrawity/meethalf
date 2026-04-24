@@ -474,11 +474,12 @@ function renderPlaces(places, votes) {
     const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
     const pct      = v ? Math.round((v / maxVotes) * 100) : 0;
 
+    const cardUrl = safeUrl(p.url);
     const extraInfo = [
-      p.hours ? `<span class="place-info-item">🕐 ${escapeHtml(p.hours)}</span>` : '',
-      p.phone ? `<span class="place-info-item">📞 <a href="tel:${escapeHtml(p.phone)}">${escapeHtml(p.phone)}</a></span>` : '',
-      p.price ? `<span class="place-info-item">💰 ${escapeHtml(p.price)}</span>` : '',
-      p.url   ? `<span class="place-info-item">🔗 <a href="${escapeHtml(p.url)}" target="_blank">Website</a></span>` : '',
+      p.hours  ? `<span class="place-info-item">🕐 ${escapeHtml(p.hours)}</span>` : '',
+      p.phone  ? `<span class="place-info-item">📞 <a href="tel:${escapeHtml(p.phone)}">${escapeHtml(p.phone)}</a></span>` : '',
+      p.price  ? `<span class="place-info-item">💰 ${escapeHtml(p.price)}</span>` : '',
+      cardUrl  ? `<span class="place-info-item">🔗 <a href="${escapeHtml(cardUrl)}" target="_blank" rel="noopener">Website</a></span>` : '',
     ].filter(Boolean).join('');
 
     const card = document.createElement('div');
@@ -688,24 +689,25 @@ function addPlaceMarkersToMap(places, mid) {
       iconAnchor: [14, 14]
     });
 
-    const distStr = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
-    const osmUrl = `https://www.openstreetmap.org/node/${p.id}`;
+    const distStr  = p.dist < 1000 ? p.dist + 'm' : (p.dist / 1000).toFixed(1) + 'km';
+    const osmUrl   = `https://www.openstreetmap.org/node/${p.id}`;
+    const popupUrl = safeUrl(p.url);
     const popupDetails = [
-      p.hours ? `🕐 ${p.hours}` : null,
-      p.phone ? `📞 <a href="tel:${p.phone}">${p.phone}</a>` : null,
-      p.price ? `💰 ${p.price}` : null,
+      p.hours ? `🕐 ${escapeHtml(p.hours)}` : null,
+      p.phone ? `📞 <a href="tel:${escapeHtml(p.phone)}">${escapeHtml(p.phone)}</a>` : null,
+      p.price ? `💰 ${escapeHtml(p.price)}` : null,
     ].filter(Boolean).map(d => `<div>${d}</div>`).join('');
     const links = [
-      p.url ? `<a href="${p.url}" target="_blank">Website</a>` : null,
-              `<a href="${osmUrl}" target="_blank">OpenStreetMap</a>`,
+      popupUrl ? `<a href="${escapeHtml(popupUrl)}" target="_blank" rel="noopener">Website</a>` : null,
+                 `<a href="${osmUrl}" target="_blank" rel="noopener">OpenStreetMap</a>`,
     ].filter(Boolean).join(' · ');
 
     const m = L.marker([p.lat, p.lng], { icon })
       .addTo(map)
       .bindPopup(`
-        <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
+        <strong style="font-family:Fraunces,serif;">${escapeHtml(p.name)}</strong><br>
         <small style="font-family:DM Mono,monospace;color:#7a7870;">
-          ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
+          ${escapeHtml(p.type.replace(/_/g, ' '))} · ${distStr} from midpoint
         </small>
         ${popupDetails ? `<div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;line-height:1.8;">${popupDetails}</div>` : ''}
         <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
@@ -1001,6 +1003,13 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+// Allow only http/https URLs from external sources (OSM data, etc.)
+function safeUrl(url) {
+  if (!url) return null;
+  const s = String(url).trim();
+  return (s.startsWith('https://') || s.startsWith('http://')) ? s : null;
 }
 
 // Close autocomplete when clicking elsewhere
