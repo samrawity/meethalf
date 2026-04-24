@@ -133,9 +133,28 @@ function calcMidpoint(coords) {
 // ─────────────────────────────────────────────────────────────
 //  MAP INIT
 // ─────────────────────────────────────────────────────────────
-function initMap(center = [48.8566, 2.3522]) {
+const TZ_COORDS = {
+  'Europe/London':[51.505,-0.09],'Europe/Lisbon':[38.717,-9.142],'Europe/Paris':[48.856,2.352],
+  'Europe/Brussels':[50.85,4.351],'Europe/Amsterdam':[52.37,4.895],'Europe/Madrid':[40.416,-3.703],
+  'Europe/Berlin':[52.52,13.405],'Europe/Rome':[41.89,12.492],'Europe/Zurich':[47.376,8.541],
+  'Europe/Stockholm':[59.332,18.065],'Europe/Oslo':[59.913,10.752],'Europe/Copenhagen':[55.676,12.568],
+  'Europe/Warsaw':[52.229,21.012],'Europe/Prague':[50.075,14.437],'Europe/Vienna':[48.208,16.373],
+  'Europe/Budapest':[47.498,19.04],'America/New_York':[40.712,-74.006],'America/Toronto':[43.651,-79.347],
+  'America/Chicago':[41.878,-87.629],'America/Mexico_City':[19.432,-99.133],'America/Denver':[39.739,-104.984],
+  'America/Los_Angeles':[34.052,-118.243],'America/Sao_Paulo':[-23.55,-46.633],
+  'Asia/Dubai':[25.204,55.27],'Asia/Kolkata':[28.613,77.209],'Asia/Singapore':[1.352,103.82],
+  'Asia/Shanghai':[31.228,121.473],'Asia/Tokyo':[35.689,139.692],'Asia/Seoul':[37.566,126.978],
+  'Australia/Sydney':[-33.868,151.209],'Africa/Cairo':[30.044,31.235],'Africa/Johannesburg':[-26.204,28.047],
+  'Pacific/Auckland':[-36.848,174.763],
+};
+
+function initMap() {
   if (map) return;
-  map = L.map('map', { zoomControl: true }).setView(center, 13);
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const tzCenter = TZ_COORDS[tz];
+  const center = tzCenter || [48.8566, 2.3522];
+  const zoom   = tzCenter ? 11 : 5;
+  map = L.map('map', { zoomControl: true }).setView(center, zoom);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
