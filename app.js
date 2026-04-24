@@ -973,15 +973,24 @@ async function searchPlaces() {
 // ─────────────────────────────────────────────────────────────
 async function vote(placeId) {
   if (lastVotedPlace) {
-    try { await fbRemove(sessionPath('votes', myUserId)); } catch (_) {}
+    try {
+      await fbRemove(sessionPath('votes', myUserId));
+    } catch (e) {
+      captureApiError(e, 'firebase', { operation: 'remove_vote', prev: lastVotedPlace, next: placeId });
+      showToast("Couldn't update your vote — please try again");
+      return;
+    }
   }
+  // Only advance state once the removal has confirmed success.
   lastVotedPlace = placeId;
   try {
     await fbSet(sessionPath('votes', myUserId), { placeId, userId: myUserId, ts: Date.now() });
     showToast('Voted!');
   } catch (e) {
-    showToast('Couldn\'t save your vote — please try again');
-    console.error('vote failed', e);
+    captureApiError(e, 'firebase', { operation: 'set_vote', placeId });
+    showToast("Couldn't save your vote — please try again");
+    // Roll back local state so a retry attempt will attempt the write again.
+    lastVotedPlace = null;
   }
 }
 
