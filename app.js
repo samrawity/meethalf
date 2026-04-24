@@ -50,6 +50,8 @@ let heartbeatInterval = null;
 let sessionUnsub  = null;
 let mapFitted     = false;
 let radiusCircle  = null;
+let suggestionAbort  = null; // AbortController for in-flight autocomplete requests
+let locatedCount     = 0;   // tracks how many participants have coords; reset triggers map refit
 
 // ─────────────────────────────────────────────────────────────
 //  SENTRY HELPERS
@@ -315,6 +317,7 @@ function leaveSession() {
   pendingCoords  = null;
   lastVotedPlace = null;
   sessionData    = null;
+  locatedCount   = 0;
 
   // Destroy map
   if (map) { map.remove(); map = null; }
@@ -515,7 +518,7 @@ function renderPlaces(places, votes) {
     `;
     card.addEventListener('click', e => {
       if (e.target.tagName === 'BUTTON') return;
-      map.setView([p.lat, p.lng], 17);
+      if (map) map.setView([p.lat, p.lng], 17);
     });
     list.appendChild(card);
 
@@ -636,6 +639,11 @@ function updateMapMarkers(users) {
 
   const located = users.filter(u => u.coords);
 
+  // Reset mapFitted whenever a new participant drops their location so the
+  // map re-fits to include them on the next updateMapMarkers pass.
+  if (located.length > locatedCount) mapFitted = false;
+  locatedCount = located.length;
+
   located.forEach(u => {
     const isMe    = u.id === myUserId;
     const color   = isMe ? '#c84a1e' : '#2a6b4f';
@@ -755,7 +763,7 @@ function useGPS() {
         error_message: err.message,
       });
     },
-    { timeout: 10000, enableHighAccuracy: false }
+    { timeout: 25000, enableHighAccuracy: false }
   );
 }
 
@@ -765,6 +773,7 @@ async function reverseGeocode(lat, lng) {
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
       { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
     );
+    if (!r.ok) throw new Error(`Nominatim reverse geocode failed with HTTP ${r.status}`);
     const d = await r.json();
     return d.display_name
       ? d.display_name.split(',').slice(0, 3).join(', ')
@@ -795,10 +804,12 @@ async function geocodeAddress() {
 }
 
 async function fetchSuggestions(q) {
+  if (suggestionAbort) suggestionAbort.abort();
+  suggestionAbort = new AbortController();
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' }, signal: suggestionAbort.signal }
     );
     const results = await r.json();
     const list = document.getElementById('suggestion-list');
@@ -822,6 +833,7 @@ async function fetchSuggestions(q) {
     });
     list.style.display = 'block';
   } catch (e) {
+    if (e.name === 'AbortError') return; // intentionally cancelled — not an error
     console.warn('fetchSuggestions failed', e);
     captureApiError(e, 'nominatim', { operation: 'autocomplete' });
   }
@@ -1066,6 +1078,12 @@ document.addEventListener('click', e => {
         initSessionScreen();
         return;
       }
+      // Stale entry from a different session — silently remove the ghost user
+      // node so it doesn't linger as a phantom presence in the old session.
+      if (parsed.sessionId && parsed.myUserId) {
+        db.ref(`sessions/${parsed.sessionId}/users/${parsed.myUserId}`).remove().catch(() => {});
+      }
+      sessionStorage.removeItem('meethalf_session');
     } catch (e) { /* corrupted storage — fall through */ }
   }
 
