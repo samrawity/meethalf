@@ -1,5 +1,7 @@
 'use strict';
 
+myUndefinedFunction(); // Sentry test — remove after verifying
+
 // ─────────────────────────────────────────────────────────────
 //  CONFIGURATION
 //  Add or modify categories here — the rest of the app adapts.
