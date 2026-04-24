@@ -1,6 +1,6 @@
 'use strict';
 
-myUndefinedFunction(); // Sentry test — remove after verifying
+setTimeout(() => myUndefinedFunction(), 2000); // Sentry test — remove after verifying
 
 // ─────────────────────────────────────────────────────────────
 //  CONFIGURATION
