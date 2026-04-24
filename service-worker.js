@@ -1,6 +1,13 @@
 'use strict';
 
-const CACHE_NAME = 'meethalf-v1';
+// ── DEPLOY INSTRUCTION ────────────────────────────────────────
+// Increment CACHE_VERSION by 1 on every deploy that changes any
+// cached file (app.js, style.css, index.html, config.js, icons).
+// This is the one manual step required — without it, users keep
+// serving the old cache indefinitely.
+// ─────────────────────────────────────────────────────────────
+const CACHE_VERSION = 2;
+const CACHE_NAME    = `meethalf-v${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
   '/',
@@ -34,14 +41,17 @@ self.addEventListener('install', event => {
   self.skipWaiting();
 });
 
-// ── Activate: delete stale caches from previous versions ─────
+// ── Activate: delete every cache that isn't the current version
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+      Promise.all(
+        keys
+          .filter(k => k.startsWith('meethalf-') && k !== CACHE_NAME)
+          .map(k => caches.delete(k))
+      )
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // ── Fetch ─────────────────────────────────────────────────────
@@ -58,17 +68,20 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Cache-first for local assets — update cache in background after serving.
+  // Stale-while-revalidate for static assets:
+  // serve the cached version immediately (fast), then fetch a fresh copy
+  // in the background and update the cache — so users get new files on
+  // the next visit without ever needing a hard refresh.
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      const networkFetch = fetch(event.request).then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
-        }
-        return response;
-      });
-      return cached || networkFetch;
-    })
+    caches.open(CACHE_NAME).then(cache =>
+      cache.match(event.request).then(cached => {
+        const networkFetch = fetch(event.request).then(response => {
+          if (response.ok) cache.put(event.request, response.clone());
+          return response;
+        }).catch(() => null);
+
+        return cached || networkFetch;
+      })
+    )
   );
 });
