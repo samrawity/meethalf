@@ -43,64 +43,103 @@
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="screen active welcome-screen" id="screen-welcome">
 
-    <div class="welcome-hero">
-      <h1 class="hero-title">Pick a spot<br/><em>everyone</em> can reach.</h1>
-      <p class="hero-sub mh-tagline">
-        Share a code, drop your location, vote on a place — done in 60 seconds.
-      </p>
-      <div class="tagline-pills">
-        <span class="pill">No account needed</span>
-        <span class="pill">Real-time sync</span>
-        <span class="pill">Privacy-first</span>
+    <!-- ── Violet header + SVG illustration ────────────────── -->
+    <div class="mh-header">
+      <p class="mh-logo">Meet<span>Half</span></p>
+      <p class="mh-tagline">Meet in the middle, always.</p>
+      <div class="mh-map">
+        <svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" width="200" height="120">
+          <ellipse cx="100" cy="72" rx="88" ry="38" fill="#3C3489"/>
+          <line x1="44" y1="54" x2="100" y2="74" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="156" y1="50" x2="100" y2="74" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <line x1="100" y1="30" x2="100" y2="74" stroke="#7F77DD" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <g class="pin-bounce pin1" transform="translate(36,28)">
+            <circle cx="8" cy="8" r="8" fill="#FAC775"/>
+            <rect x="6.5" y="14" width="3" height="7" rx="1.5" fill="#FAC775"/>
+            <circle cx="8" cy="8" r="3" fill="#412402"/>
+          </g>
+          <g class="pin-bounce pin2" transform="translate(148,24)">
+            <circle cx="8" cy="8" r="8" fill="#FAC775"/>
+            <rect x="6.5" y="14" width="3" height="7" rx="1.5" fill="#FAC775"/>
+            <circle cx="8" cy="8" r="3" fill="#412402"/>
+          </g>
+          <g class="pin-bounce pin3" transform="translate(92,4)">
+            <circle cx="8" cy="8" r="8" fill="#FAC775"/>
+            <rect x="6.5" y="14" width="3" height="7" rx="1.5" fill="#FAC775"/>
+            <circle cx="8" cy="8" r="3" fill="#412402"/>
+          </g>
+          <g class="star-pop" transform="translate(86,62)">
+            <circle cx="14" cy="14" r="14" fill="#EF9F27"/>
+            <text x="14" y="19" text-anchor="middle" font-size="14" fill="#412402">★</text>
+          </g>
+        </svg>
       </div>
     </div>
 
-    <div class="welcome-cards">
+    <!-- ── Body ────────────────────────────────────────────── -->
+    <div class="mh-body">
 
-      <!-- Start card -->
-      <div class="action-card card--dark" id="card-start">
-        <span class="card-eyebrow">Start</span>
-        <h2 class="card-title">Start a session</h2>
-        <p class="card-sub">Pick a meeting spot for your group — share a code to invite others</p>
-        <div class="card-form" id="form-start">
-          <div class="form-group">
-            <label class="form-label" for="name-start">Your name</label>
-            <input type="text" id="name-start" placeholder="e.g. Sophie" maxlength="20"
-              onkeydown="if(event.key==='Enter') createSession()" />
-          </div>
-          <button class="btn full mh-btn-primary" onclick="createSession()">Start a session →</button>
-        </div>
-        <button class="card-cta" onclick="expandCard('start')">Get started →</button>
+      <!-- Create session -->
+      <div class="form-group">
+        <input type="text" id="name-start" placeholder="Your name (optional)…" maxlength="20"
+          onkeydown="if(event.key==='Enter') createSession()" />
       </div>
+      <button class="mh-btn-primary" onclick="createSession()">Create a session →</button>
 
       <!-- Join card -->
-      <div class="action-card" id="card-join">
-        <span class="card-eyebrow">Join</span>
-        <h2 class="card-title">Join a session</h2>
-        <p class="card-sub">Someone sent you a code — enter it to share your location and vote</p>
-        <div class="card-form" id="form-join">
-          <div class="form-group">
-            <label class="form-label" for="name-join">Your name</label>
-            <input type="text" id="name-join" placeholder="e.g. Sophie" maxlength="20"
-              onkeydown="if(event.key==='Enter') joinSession()" />
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="join-code-input">Session code</label>
-            <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6"
-              oninput="this.value=this.value.toUpperCase()"
-              onkeydown="if(event.key==='Enter') joinSession()" />
-          </div>
-          <button class="btn primary full mh-join-btn" onclick="joinSession()">Join with a code →</button>
+      <div class="mh-join-card">
+        <p class="mh-join-label">Join with a code</p>
+        <div class="form-group">
+          <input type="text" id="name-join" placeholder="Your name (optional)…" maxlength="20"
+            onkeydown="if(event.key==='Enter') joinSession()" />
         </div>
-        <button class="card-cta mh-join-btn" onclick="expandCard('join')">Enter code →</button>
+        <div class="mh-join-row">
+          <input class="mh-code-input" id="join-code-input" placeholder="ABC123" maxlength="6"
+            oninput="this.value=this.value.toUpperCase()"
+            onkeydown="if(event.key==='Enter') joinSession()" />
+          <button class="mh-join-btn" onclick="joinSession()">Join →</button>
+        </div>
       </div>
 
-    </div>
+      <!-- How it works -->
+      <div class="mh-steps">
+        <div class="mh-step">
+          <div class="mh-step-icon" style="background:#E1F5EE;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <circle cx="9" cy="7" r="3" fill="#1D9E75"/>
+              <path d="M9 2C6.24 2 4 4.24 4 7c0 3.5 5 9 5 9s5-5.5 5-9c0-2.76-2.24-5-5-5z" stroke="#1D9E75" stroke-width="1.5" fill="none"/>
+            </svg>
+          </div>
+          <p class="mh-step-label">Share your location</p>
+        </div>
+        <div class="mh-sep"></div>
+        <div class="mh-step">
+          <div class="mh-step-icon" style="background:#FAEEDA;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="2" width="14" height="14" rx="3" stroke="#BA7517" stroke-width="1.5" fill="none"/>
+              <circle cx="9" cy="9" r="2.5" fill="#BA7517"/>
+              <line x1="2" y1="9" x2="6" y2="9" stroke="#BA7517" stroke-width="1.5"/>
+              <line x1="12" y1="9" x2="16" y2="9" stroke="#BA7517" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <p class="mh-step-label">Find the midpoint</p>
+        </div>
+        <div class="mh-sep"></div>
+        <div class="mh-step">
+          <div class="mh-step-icon" style="background:#EEEDFE;">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect x="2" y="4" width="14" height="10" rx="2" stroke="#534AB7" stroke-width="1.5" fill="none"/>
+              <circle cx="6" cy="9" r="1.5" fill="#534AB7"/>
+              <circle cx="9" cy="9" r="1.5" fill="#AFA9EC"/>
+              <circle cx="12" cy="9" r="1.5" fill="#AFA9EC"/>
+            </svg>
+          </div>
+          <p class="mh-step-label">Vote together</p>
+        </div>
+      </div>
 
-    <p class="welcome-note">
-      No account, no personal data, no location stored beyond the session.
-      We collect anonymous usage patterns to improve the experience — nothing that identifies you.
-    </p>
+      <p class="mh-footer">No account needed · Works anywhere</p>
+    </div>
 
   </div>
 

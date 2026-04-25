@@ -18,7 +18,7 @@
 
 body {
   font-family: var(--sans);
-  background: var(--paper);
+  background: var(#F4F3FE);
   color: var(--ink);
   min-height: 100vh;
   min-height: 100dvh;
@@ -876,48 +876,194 @@ input:focus, select:focus { border-color: var(--ink); }
    WELCOME SCREEN REDESIGN — mh-* components
    ============================================ */
 
-/* Header — violet profond */
+/* Welcome screen — top-aligned column */
+.welcome-screen {
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+}
+
+/* ── Header ─────────────────────────────────── */
 .mh-header {
+  width: 100%;
+  max-width: 480px;
   background: #534AB7;
+  padding: 2rem 1.5rem 1.25rem;
+  text-align: center;
+  border-radius: 0 0 24px 24px;
 }
 
-/* Logo */
 .mh-logo {
-  color: #EEEDFE;
+  font-size: 28px;
   font-weight: 700;
+  color: #EEEDFE;
+  letter-spacing: -0.5px;
+  margin: 0 0 4px;
 }
-.mh-logo span {
-  color: #FAC775;
-}
+.mh-logo span { color: #FAC775; }
 
-/* Tagline — WCAG AAA (ratio 7.3:1 sur #534AB7) */
+/* WCAG AAA — ratio 7.3:1 sur #534AB7 */
 .mh-tagline {
+  font-size: 13px;
   color: #ffffff;
+  margin: 0;
 }
 
-/* Illustration SVG */
-.mh-map ellipse          { fill: #3C3489; }
-.mh-map line             { stroke: #7F77DD; }
-.mh-map .pin circle      { fill: #FAC775; }
-.mh-map .pin rect        { fill: #FAC775; }
-.mh-map .pin .inner      { fill: #412402; }
-.mh-map .star circle     { fill: #EF9F27; }
+/* SVG map container */
+.mh-map {
+  margin: 1.25rem auto 0;
+  width: 200px;
+  height: 120px;
+}
 
-/* CTA primaire — ambre */
+/* Pin entrance animation */
+.pin-bounce { animation: pinBounce 0.6s ease forwards; }
+.pin1 { animation-delay: 0.1s;  opacity: 0; }
+.pin2 { animation-delay: 0.25s; opacity: 0; }
+.pin3 { animation-delay: 0.4s;  opacity: 0; }
+@keyframes pinBounce {
+  0%   { transform: translateY(-12px); opacity: 0; }
+  60%  { transform: translateY(3px); }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Star midpoint pop */
+.star-pop {
+  animation: starPop 0.4s ease 0.65s forwards;
+  opacity: 0;
+  transform: scale(0);
+  transform-origin: 14px 14px;
+}
+@keyframes starPop { to { opacity: 1; transform: scale(1); } }
+
+/* ── Body ───────────────────────────────────── */
+.mh-body {
+  width: 100%;
+  max-width: 480px;
+  padding: 1.25rem 1.25rem 2rem;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── CTA primaire — ambre ───────────────────── */
 .mh-btn-primary {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
   background: #FAC775;
   color: #412402;
+  font-size: 15px;
   font-weight: 700;
+  font-family: var(--sans);
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 12px;
+  transition: background 0.15s;
 }
-.mh-btn-primary:hover {
-  background: #EF9F27;
+.mh-btn-primary:hover { background: #EF9F27; }
+
+/* ── Join card ──────────────────────────────── */
+.mh-join-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--card);
 }
 
-/* Bouton join — violet */
+.mh-join-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.mh-join-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mh-code-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--mono);
+  letter-spacing: 3px;
+  color: var(--ink);
+  text-transform: uppercase;
+  outline: none;
+  transition: border-color 0.15s;
+  width: auto;
+}
+.mh-code-input::placeholder { letter-spacing: 2px; color: var(--muted); font-weight: 400; }
+.mh-code-input:focus { border-color: #534AB7; }
+
+/* ── Bouton join — violet ───────────────────── */
 .mh-join-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
   background: #534AB7;
   color: #EEEDFE;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--sans);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
 }
-.mh-join-btn:hover {
-  background: #3C3489;
+.mh-join-btn:hover { background: #3C3489; }
+
+/* ── How it works ───────────────────────────── */
+.mh-steps {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.mh-step {
+  flex: 1;
+  text-align: center;
+  padding: 0 6px;
+}
+
+.mh-step-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin: 0 auto 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mh-step-label {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.mh-sep {
+  width: 1px;
+  background: var(--border);
+  align-self: stretch;
+  margin: 8px 0;
+  flex-shrink: 0;
+}
+
+/* ── Footer note ────────────────────────────── */
+.mh-footer {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 11px;
+  color: var(--muted);
 }
