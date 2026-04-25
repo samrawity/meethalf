@@ -6,7 +6,7 @@
   --ink: #1a1a18;
   --paper: #f5f2ea;
   --muted: #7a7870;
-  --accent: #c84a1e;
+  --accent: #FAC775;
   --accent2: #2a6b4f;
   --border: rgba(26,26,24,0.12);
   --card: #ffffff;
@@ -887,7 +887,7 @@ input:focus, select:focus { border-color: var(--ink); }
 .mh-header {
   width: 100%;
   max-width: 480px;
-  background: #534AB7;
+  background: #dad8f0;
   padding: 2rem 1.5rem 1.25rem;
   text-align: center;
   border-radius: 0 0 24px 24px;
@@ -896,7 +896,7 @@ input:focus, select:focus { border-color: var(--ink); }
 .mh-logo {
   font-size: 28px;
   font-weight: 700;
-  color: #EEEDFE;
+  color: #534AB7;
   letter-spacing: -0.5px;
   margin: 0 0 4px;
 }
