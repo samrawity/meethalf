@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#1a1a18"/>
-  <polygon points="256,64 448,256 256,448 64,256" fill="#c84a1e"/>
-  <text x="256" y="276" font-family="Georgia, serif" font-size="128" font-weight="bold"
-    fill="#f5f2ea" text-anchor="middle" dominant-baseline="middle">M</text>
-</svg>

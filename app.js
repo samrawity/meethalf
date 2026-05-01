@@ -202,10 +202,9 @@ function onRadiusChange(val) {
 //  SESSION LIFECYCLE
 // ─────────────────────────────────────────────────────────────
 function expandCard(which) {
-  const card = document.getElementById('card-' + which);
-  const other = document.getElementById('card-' + (which === 'start' ? 'join' : 'start'));
-  if (card)  card.classList.add('is-active');
-  if (other) other.classList.remove('is-active');
+  const other = which === 'start' ? 'join' : 'start';
+  document.getElementById('card-' + which).classList.add('is-active');
+  document.getElementById('card-' + other).classList.remove('is-active');
   const input = document.getElementById('name-' + which);
   if (input) setTimeout(() => input.focus(), 50);
 }
@@ -1096,11 +1095,10 @@ document.addEventListener('click', e => {
     sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId: upper, myUserId, myName }));
     initSessionScreen();
   } else {
-    // New visitor — pre-fill the join code and focus the name field.
+    // New visitor — expand join card, pre-fill code, focus name input.
     const codeInput = document.getElementById('join-code-input');
     if (codeInput) codeInput.value = upper;
-    const nameInput = document.getElementById('name-join');
-    if (nameInput) setTimeout(() => nameInput.focus(), 50);
+    expandCard('join');
   }
 })();
 
