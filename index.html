@@ -45,7 +45,7 @@
 
     <div class="welcome-hero">
       <h1 class="hero-title">Pick a spot<br/><em>everyone</em> can reach.</h1>
-      <p class="hero-sub mh-tagline">
+      <p class="hero-sub">
         Share a code, drop your location, vote on a place — done in 60 seconds.
       </p>
       <div class="tagline-pills">
@@ -68,7 +68,7 @@
             <input type="text" id="name-start" placeholder="e.g. Sophie" maxlength="20"
               onkeydown="if(event.key==='Enter') createSession()" />
           </div>
-          <button class="btn full mh-btn-primary" onclick="createSession()">Start a session →</button>
+          <button class="btn full" onclick="createSession()">Start a session →</button>
         </div>
         <button class="card-cta" onclick="expandCard('start')">Get started →</button>
       </div>
@@ -90,9 +90,9 @@
               oninput="this.value=this.value.toUpperCase()"
               onkeydown="if(event.key==='Enter') joinSession()" />
           </div>
-          <button class="btn primary full mh-join-btn" onclick="joinSession()">Join with a code →</button>
+          <button class="btn primary" onclick="joinSession()">Join with a code →</button>
         </div>
-        <button class="card-cta mh-join-btn" onclick="expandCard('join')">Enter code →</button>
+        <button class="card-cta" onclick="expandCard('join')">Enter code →</button>
       </div>
 
     </div>
@@ -109,8 +109,8 @@
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="screen" id="screen-session">
 
-    <header class="mh-header">
-      <span class="logo mh-logo">Meet<span>Half</span></span>
+    <header>
+      <span class="logo">Meet<span>Half</span></span>
       <span class="session-badge" id="header-code-badge"></span>
       <div class="spacer"></div>
       <button class="btn sm" onclick="leaveSession()">Leave session</button>

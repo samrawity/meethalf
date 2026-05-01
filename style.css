@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -12,12 +12,12 @@
   --card: #ffffff;
   --mono: 'DM Mono', monospace;
   --serif: 'Fraunces', serif;
-  --sans: 'Space Grotesk', sans-serif;
+  --sans: 'Frances', sans-serif;
   font-family: var(--sans);
 }
 
 body {
-  font-family: var(--sans);
+  font-family: var(--mono);
   background: var(--paper);
   color: var(--ink);
   min-height: 100vh;
@@ -869,63 +869,4 @@ input:focus, select:focus { border-color: var(--ink); }
   .fab:active { background: var(--accent2); }
 
   /* Hide status bar — no room on mobile */
-  .status-bar { display: none; }
-}
-
-/* ============================================
-   WELCOME SCREEN REDESIGN — mh-* components
-   ============================================ */
-
-/* Header — violet profond */
-.mh-header {
-  width: 100%;
-  max-width: 480px;
-  background: #dad8f0;
-  padding: 2rem 1.5rem 1.25rem;
-  text-align: center;
-  border-radius: 0 0 24px 24px;
-}
-
-/* Logo */
-.mh-logo {
-  font-size: 28px;
-  font-weight: 700;
-  color: #534AB7;
-  letter-spacing: -0.5px;
-  margin: 0 0 4px;
-}
-.mh-logo span {
-  color: #FAC775;
-}
-
-/* Tagline — WCAG AAA (ratio 7.3:1 sur #534AB7) */
-.mh-tagline {
-  color: #ffffff;
-}
-
-/* Illustration SVG */
-.mh-map ellipse          { fill: #3C3489; }
-.mh-map line             { stroke: #7F77DD; }
-.mh-map .pin circle      { fill: #FAC775; }
-.mh-map .pin rect        { fill: #FAC775; }
-.mh-map .pin .inner      { fill: #412402; }
-.mh-map .star circle     { fill: #EF9F27; }
-
-/* CTA primaire — ambre */
-.mh-btn-primary {
-  background: #FAC775;
-  color: #412402;
-  font-weight: 700;
-}
-.mh-btn-primary:hover {
-  background: #EF9F27;
-}
-
-/* Bouton join — violet */
-.mh-join-btn {
-  background: #534AB7;
-  color: #EEEDFE;
-}
-.mh-join-btn:hover {
-  background: #3C3489;
-}
+  .status-bar { display: none; }}
