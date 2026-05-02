@@ -248,6 +248,15 @@ async function initSessionScreen() {
 
   buildFilters();
   initMap();
+
+  // On mobile, open the bottom sheet automatically so users see the steps immediately
+  if (window.innerWidth <= 768) {
+    const sidebar = document.querySelector('.sidebar');
+    const fab     = document.getElementById('fab-btn');
+    if (sidebar) sidebar.classList.add('is-open');
+    if (fab) fab.textContent = '✕';
+  }
+
   setTimeout(() => { if (map) map.invalidateSize(); }, 50);
 
   mapFitted = false;
