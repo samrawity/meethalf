@@ -897,6 +897,52 @@ input:focus, select:focus {
 }
 .leaflet-control-attribution a { color: var(--text-secondary) !important; }
 
+/* --- DROP-PIN FEATURE ------------------------------------------------------ */
+#map.map--pin-mode { cursor: crosshair; }
+
+.pin-drop-marker {
+  position: relative;
+  width: 32px;
+  height: 32px;
+}
+.pin-drop-marker::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50% 50% 50% 0;
+  rotate: -45deg;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255,79,216,0.4);
+}
+.pin-drop-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  opacity: 0;
+  animation: pin-pulse 1.4s ease-out infinite;
+}
+@keyframes pin-pulse {
+  0%   { transform: translate(-50%,-50%) scale(0.4); opacity: 0.9; }
+  100% { transform: translate(-50%,-50%) scale(1.6); opacity: 0;   }
+}
+
+.pin-drop-hint {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 0.5rem;
+  letter-spacing: 0.01em;
+}
+
 /* --- RESPONSIVE ------------------------------------------------------------ */
 @media (max-width: 768px) {
   /* Prevent iOS zoom -- already 16px above */

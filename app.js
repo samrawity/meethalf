@@ -38,6 +38,7 @@ let myName        = '';
 let myCoords      = null;   // { lat, lng, label }
 let pendingCoords = null;   // staged coords before user confirms
 let map           = null;
+let pinDropMarker = null;   // temporary marker while user is picking their location
 let userMarkers   = {};
 let midpointMarker = null;
 let placeMarkers  = [];
@@ -164,6 +165,8 @@ function initMap() {
     attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19
   }).addTo(map);
+  map.on('click', onMapClick);
+  document.getElementById('map').classList.add('map--pin-mode');
 }
 
 function updateRadiusCircle() {
@@ -320,6 +323,7 @@ function leaveSession() {
   locatedCount   = 0;
 
   // Destroy map
+  if (pinDropMarker) { pinDropMarker.remove(); pinDropMarker = null; }
   if (map) { map.remove(); map = null; }
   Object.values(userMarkers).forEach(m => m.remove());
   userMarkers = {};
@@ -783,6 +787,34 @@ async function reverseGeocode(lat, lng) {
   }
 }
 
+async function onMapClick(e) {
+  if (myCoords) return; // already confirmed — don't override
+  const { lat, lng } = e.latlng;
+
+  // Place or move the drop-pin marker
+  if (pinDropMarker) {
+    pinDropMarker.setLatLng([lat, lng]);
+  } else {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="pin-drop-marker"><div class="pin-drop-ring"></div></div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    });
+    pinDropMarker = L.marker([lat, lng], { icon, zIndexOffset: 500 }).addTo(map);
+  }
+
+  document.getElementById('loc-status').textContent = 'Locating…';
+  document.getElementById('confirm-loc-btn').disabled = true;
+
+  const label = await reverseGeocode(lat, lng);
+  pendingCoords = { lat, lng, label };
+  document.getElementById('addr-input').value = label;
+  document.getElementById('confirm-loc-btn').disabled = false;
+  document.getElementById('loc-status').textContent = `📍 ${label}`;
+  document.getElementById('suggestion-list').style.display = 'none';
+}
+
 function onAddrInput(val) {
   clearTimeout(addrDebounce);
   if (val.length < 3) {
@@ -843,6 +875,11 @@ async function setMyLocation() {
   myCoords = pendingCoords;
   document.getElementById('loc-status').textContent = `✓ Set: ${myCoords.label}`;
   document.getElementById('confirm-loc-btn').disabled = true;
+
+  // Remove drop-pin preview and crosshair cursor once location is confirmed
+  if (pinDropMarker) { pinDropMarker.remove(); pinDropMarker = null; }
+  document.getElementById('map').classList.remove('map--pin-mode');
+
   await pushMyUser();
   showToast('Got it, you\'re on the map!');
 }
