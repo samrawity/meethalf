@@ -695,10 +695,55 @@ input:focus, select:focus {
   transition: max-height 0.32s var(--ease-meet), opacity 0.25s var(--ease-meet);
 }
 .action-card.is-active .card-form {
-  max-height: 360px;
+  max-height: 480px; /* bumped for 3 fields */
   opacity: 1;
 }
 .action-card.is-active .card-cta { display: none; }
+
+/* Share step -- shown after session is created, replaces the form */
+.card-share {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.32s var(--ease-meet), opacity 0.25s var(--ease-meet);
+}
+.action-card.is-shared .card-form { max-height: 0; opacity: 0; pointer-events: none; }
+.action-card.is-shared .card-share { max-height: 320px; opacity: 1; }
+.action-card.is-shared .card-cta   { display: none; }
+
+.share-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 0.75rem;
+}
+.share-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0.6rem;
+}
+.share-code-val {
+  flex: 1;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: var(--text-primary);
+  font-family: var(--mono);
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  padding: 10px 16px;
+  text-align: center;
+}
+.share-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
 
 /* CTA button (pre-expansion) */
 .card-cta {

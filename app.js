@@ -35,6 +35,7 @@ const SYNC_INTERVAL = 3000;
 let sessionId     = null;
 let myUserId      = null;
 let myName        = '';
+let meetName      = '';     // session display name set by the creator
 let myCoords      = null;   // { lat, lng, label }
 let pendingCoords = null;   // staged coords before user confirms
 let map           = null;
@@ -208,19 +209,45 @@ function expandCard(which) {
   const other = which === 'start' ? 'join' : 'start';
   document.getElementById('card-' + which).classList.add('is-active');
   document.getElementById('card-' + other).classList.remove('is-active');
-  const input = document.getElementById('name-' + which);
+  const inputId = which === 'start' ? 'meet-name' : 'name-' + which;
+  const input = document.getElementById(inputId);
   if (input) setTimeout(() => input.focus(), 50);
 }
 
 function createSession() {
+  meetName  = document.getElementById('meet-name').value.trim();
   const name = document.getElementById('name-start').value.trim() || 'Anonymous';
   myName    = name;
   myUserId  = genUserId();
   sessionId = genCode();
   localStorage.setItem('meethalf_name', name);
-  sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId, myUserId, myName }));
+  sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId, myUserId, myName, meetName }));
   history.pushState({ sessionId }, '', '?s=' + sessionId);
+
+  // Show the share step before entering the session
+  document.getElementById('share-code-val').textContent = sessionId;
+  document.getElementById('card-start').classList.add('is-shared');
+}
+
+function enterSession() {
+  if (meetName) fbSet(sessionPath('name'), meetName).catch(() => {});
   initSessionScreen();
+}
+
+function copyShareCode() {
+  const url = location.origin + location.pathname + '?s=' + sessionId;
+  navigator.clipboard.writeText(url)
+    .then(() => showToast('Link copied!'))
+    .catch(() => {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement('textarea');
+      el.value = url;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      showToast('Link copied!');
+    });
 }
 
 function joinSession() {
@@ -243,7 +270,7 @@ async function initSessionScreen() {
   document.getElementById('code-display').innerHTML =
     sessionId + '<span class="copy-hint">Click to copy</span>';
   const badge = document.getElementById('header-code-badge');
-  badge.textContent = 'Session — ' + sessionId;
+  badge.textContent = meetName ? `${meetName} · ${sessionId}` : sessionId;
   badge.style.display = 'inline';
 
   buildFilters();
@@ -325,6 +352,7 @@ function leaveSession() {
 
   // Reset all state
   sessionId      = null;
+  meetName       = '';
   myCoords       = null;
   pendingCoords  = null;
   lastVotedPlace = null;
@@ -398,6 +426,11 @@ function listenToSession() {
       if (v && v.placeId) votes[v.placeId] = (votes[v.placeId] || 0) + 1;
     });
     sessionData = { users, places, votes, summary: data.summary || null };
+    if (data.name && !meetName) {
+      meetName = data.name;
+      const badge = document.getElementById('header-code-badge');
+      if (badge) badge.textContent = `${meetName} · ${sessionId}`;
+    }
     renderUsers(users);
     if (data.summary) {
       renderResult(data.summary);
@@ -1119,6 +1152,7 @@ document.addEventListener('click', e => {
       if (parsed.sessionId === upper) {
         myName    = parsed.myName;
         myUserId  = parsed.myUserId;
+        meetName  = parsed.meetName || '';
         sessionId = upper;
         initSessionScreen();
         return;
