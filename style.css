@@ -250,7 +250,6 @@ input:focus, select:focus {
   transition: all 0.15s var(--ease-meet);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  white-space: nowrap;
   border-radius: 12px;
 }
 .btn:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.30); }
