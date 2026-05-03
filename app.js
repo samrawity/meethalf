@@ -8,7 +8,9 @@
 const TRANSLATIONS = {
   fr: {
     // Welcome screen
-    hero_title:            "Trouvez l'endroit où tout le monde arrive à mi-chemin.",
+    hero_title_pre:        "Trouvez l'endroit où",
+    hero_title_em:         "tout le monde",
+    hero_title_post:       "arrive à mi-chemin.",
     hero_subtitle:         "Partagez un code, épinglez votre position, votez pour un lieu. En 60 secondes, c'est réglé.",
     pill_free:             "Gratuit",
     pill_no_account:       "Sans compte",
@@ -123,7 +125,9 @@ const TRANSLATIONS = {
   },
   en: {
     // Welcome screen
-    hero_title:            "Find the spot everyone can actually reach.",
+    hero_title_pre:        "Find the spot",
+    hero_title_em:         "everyone",
+    hero_title_post:       "can actually reach.",
     hero_subtitle:         "Share a code, drop your location, vote on a place. Done in 60 seconds.",
     pill_free:             "Free",
     pill_no_account:       "No account",
