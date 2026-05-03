@@ -1,6 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#1a1a18"/>
-  <polygon points="256,64 448,256 256,448 64,256" fill="#c84a1e"/>
-  <text x="256" y="276" font-family="Georgia, serif" font-size="128" font-weight="bold"
-    fill="#f5f2ea" text-anchor="middle" dominant-baseline="middle">M</text>
+  <rect width="512" height="512" rx="112" fill="#050812"/>
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff4fd8"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+  </defs>
+  <path d="M256 74C184 74 124 134 124 206c0 112 132 232 132 232s132-120 132-232c0-72-60-132-132-132z" fill="url(#g)"/>
+  <circle cx="256" cy="206" r="58" fill="white"/>
 </svg>

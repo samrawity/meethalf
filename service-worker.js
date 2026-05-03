@@ -6,8 +6,8 @@
 // This is the one manual step required — without it, users keep
 // serving the old cache indefinitely.
 // ─────────────────────────────────────────────────────────────
-const CACHE_VERSION = 2;
-const CACHE_NAME    = `meethalf-v${CACHE_VERSION}`;
+const CACHE_VERSION = 3;
+const CACHE_NAME    = `amichemin-v${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
   '/',
@@ -47,7 +47,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(k => k.startsWith('meethalf-') && k !== CACHE_NAME)
+          .filter(k => (k.startsWith('meethalf-') || k.startsWith('amichemin-')) && k !== CACHE_NAME)
           .map(k => caches.delete(k))
       )
     ).then(() => self.clients.claim())

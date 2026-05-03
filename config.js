@@ -5,7 +5,7 @@ if (window.Sentry) {
       environment: (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
         ? 'development'
         : 'production',
-      release: 'meethalf@1.0.0',
+      release: 'amichemin@1.0.0',
     });
   });
 }
