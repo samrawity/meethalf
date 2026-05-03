@@ -159,7 +159,7 @@ const TRANSLATIONS = {
     btn_lets_go:           "Let's go →",
     welcome_note:          "Your location is never required. It vanishes when the session ends.",
     // Session header
-    btn_leave_session:     "Leave session",
+    btn_leave_session:     "Exit",
     // Code panel
     panel_code_title:      "Session code",
     panel_code_sub:        "Share with friends",
@@ -529,7 +529,7 @@ function copyShareCode() {
 function joinSession() {
   const code = document.getElementById('join-code-input').value.trim().toUpperCase();
   const name = document.getElementById('name-join').value.trim() || 'Anonymous';
-  if (!code || code.length < 4) { showToast(t('toast_join_error')); return; }
+  if (!code || code.length !== 6) { showToast(t('toast_join_error')); return; }
   myName    = name;
   myUserId  = genUserId();
   sessionId = code;
