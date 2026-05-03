@@ -509,6 +509,17 @@ function createSession() {
 }
 
 function enterSession() {
+  if (!sessionId) {
+    const visibleCode = document.getElementById('share-code-val').textContent.trim();
+    if (visibleCode && visibleCode.length === 6) {
+      sessionId = visibleCode;
+      if (!myUserId) myUserId = genUserId();
+      if (!myName) myName = localStorage.getItem('amichemin_name') || 'Anonymous';
+      sessionStorage.setItem('amichemin_session', JSON.stringify({ sessionId, myUserId, myName, meetName }));
+    } else {
+      return;
+    }
+  }
   if (meetName) fbSet(sessionPath('name'), meetName).catch(() => {});
   initSessionScreen();
 }
