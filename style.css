@@ -90,7 +90,7 @@ header {
   font-style: italic;
   letter-spacing: -0.03em;
   color: var(--ink);
-  
+  text-decoration: none;
 }
 .logo span {
   font-style: italic;
