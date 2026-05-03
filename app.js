@@ -41,6 +41,7 @@ const TRANSLATIONS = {
     btn_copy_link:         "Copier le lien",
     btn_lets_go:           "C'est parti →",
     welcome_note:          "Votre position n'est jamais obligatoire. Elle disparaît à la fin de la session.",
+    footer_about:          "En savoir plus sur Amichemin — l'appli qui trouve le lieu à mi-chemin pour tout le groupe",
     // Session header
     btn_leave_session:     "Quitter",
     // Code panel
@@ -158,6 +159,7 @@ const TRANSLATIONS = {
     btn_copy_link:         "Copy link",
     btn_lets_go:           "Let's go →",
     welcome_note:          "Your location is never required. It vanishes when the session ends.",
+    footer_about:          "Learn more about Amichemin — the app that finds the halfway meeting point for your whole group",
     // Session header
     btn_leave_session:     "Exit",
     // Code panel
