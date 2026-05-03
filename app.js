@@ -638,6 +638,8 @@ function leaveSession() {
   if (midpointMarker) { midpointMarker.remove(); midpointMarker = null; }
   if (radiusCircle)   { radiusCircle.remove();   radiusCircle = null; }
 
+  if (suggestionAbort) { suggestionAbort.abort(); suggestionAbort = null; }
+
   const badge = document.getElementById('header-code-badge');
   if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
 
