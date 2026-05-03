@@ -1,11 +1,11 @@
 {
-  "name": "MeetHalf",
-  "short_name": "MeetHalf",
-  "description": "Pick a spot everyone can reach.",
+  "name": "Amichemin",
+  "short_name": "Amichemin",
+  "description": "Trouvez l'endroit où tout le monde arrive à mi-chemin.",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f5f2ea",
-  "theme_color": "#1a1a18",
+  "background_color": "#050812",
+  "theme_color": "#050812",
   "icons": [
     {
       "src": "/icon-192.svg",

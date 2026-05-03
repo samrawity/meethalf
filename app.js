@@ -1,59 +1,336 @@
 'use strict';
 
 // ─────────────────────────────────────────────────────────────
+//  TRANSLATIONS
+//  All user-facing strings. Keys are semantic identifiers.
+//  Functions handle pluralisation / interpolation.
+// ─────────────────────────────────────────────────────────────
+const TRANSLATIONS = {
+  fr: {
+    // Welcome screen
+    hero_title:            "Trouvez l'endroit où tout le monde arrive à mi-chemin.",
+    hero_subtitle:         "Partagez un code, épinglez votre position, votez pour un lieu. En 60 secondes, c'est réglé.",
+    pill_free:             "Gratuit",
+    pill_no_account:       "Sans compte",
+    pill_realtime:         "Temps réel",
+    pill_open_data:        "Données ouvertes",
+    // Start card
+    card_start_eyebrow:    "Créer",
+    card_start_title:      "Créer une session",
+    card_start_sub:        "Choisissez un point de rencontre — partagez un code pour inviter les autres",
+    label_meet_name:       "C'est quoi le plan ?",
+    ph_meet_name:          "Soirée entre amis",
+    label_your_name:       "Votre prénom",
+    ph_your_name:          "ex. Sophie",
+    btn_start_session:     "Créer une session",
+    btn_get_started:       "Commencer →",
+    // Join card
+    card_join_eyebrow:     "Rejoindre",
+    card_join_title:       "Rejoindre une session",
+    card_join_sub:         "Quelqu'un vous a envoyé un code — entrez-le pour partager votre position et voter",
+    label_join_name:       "Votre prénom",
+    label_session_code:    "Code de session",
+    ph_session_code:       "ABC123",
+    btn_join_session:      "Rejoindre avec un code",
+    btn_enter_code:        "Entrer le code →",
+    // Share step
+    share_label:           "Partagez avec votre groupe",
+    share_hint:            "Quiconque a le lien peut épingler sa position.",
+    btn_copy_link:         "Copier le lien",
+    btn_lets_go:           "C'est parti →",
+    welcome_note:          "Votre position n'est jamais obligatoire. Elle disparaît à la fin de la session.",
+    // Session header
+    btn_leave_session:     "Quitter",
+    // Code panel
+    panel_code_title:      "Code de session",
+    panel_code_sub:        "Partagez avec vos amis",
+    copy_hint:             "Cliquer pour copier",
+    // Location panel
+    step_1:                "Étape 1",
+    panel_location:        "Votre position",
+    ph_address:            "Tapez une adresse…",
+    btn_use_gps:           "GPS",
+    btn_confirm_location:  "Confirmer",
+    pin_drop_hint:         "Ou tapez la carte pour épingler",
+    loc_finding:           "Localisation en cours…",
+    loc_locating:          "Localisation…",
+    loc_set:               label => `✓ Enregistré : ${label}`,
+    // Participants panel
+    step_2:                "Étape 2",
+    panel_participants:    "Participants",
+    empty_waiting:         "En attente de participants…",
+    no_location_set:       "Position non définie",
+    user_you:              "(vous)",
+    // Find places panel
+    step_3:                "Étape 3",
+    panel_find_places:     "Trouver des lieux",
+    search_radius:         "Rayon de recherche",
+    btn_find_places:       "Trouver des lieux proches",
+    loading_text:          "Recherche dans le quartier…",
+    // Vote panel
+    step_4:                "Étape 4",
+    panel_vote:            "Votez pour un lieu",
+    empty_places:          "Cherchez des lieux pour voir les résultats ici.",
+    btn_vote:              "Voter",
+    btn_voted:             "✓ Voté",
+    top_pick:              "Favori",
+    from_midpoint:         "du point médian",
+    btn_share_result:      "Partager le résultat",
+    // Result
+    result_label:          "Résultat",
+    result_winner:         "Nous avons un gagnant",
+    btn_open_maps:         "Ouvrir dans Maps",
+    result_decided:        "Décidé à",
+    // Status / misc
+    status_connecting:     "Connexion…",
+    sheet_tap:             "Appuyez pour ouvrir",
+    midpoint_label:        "Point médian",
+    // Categories
+    cat_food:              "Restaurants",
+    cat_cafe:              "Café",
+    cat_drink:             "Bars",
+    cat_gym:               "Sport",
+    cat_park:              "Parcs",
+    cat_culture:           "Culture",
+    // Toasts
+    toast_link_copied:     "Lien copié !",
+    toast_code_copied:     "Lien copié — envoyez-le à votre groupe !",
+    toast_location_saved:  "Position enregistrée !",
+    toast_voted:           "Voté !",
+    toast_session_full:    "Cette session est complète",
+    toast_gps_unavailable: "GPS non disponible — essayez de saisir votre adresse",
+    toast_gps_failed:      "Impossible d'obtenir votre GPS — saisissez votre adresse.",
+    toast_no_category:     "Sélectionnez au moins une catégorie",
+    toast_vote_error:      "Impossible de mettre à jour votre vote — réessayez",
+    toast_vote_save_error: "Impossible d'enregistrer votre vote — réessayez",
+    toast_places_error:    "Impossible de récupérer les lieux — réessayez",
+    toast_share_error:     "Impossible d'ouvrir le partage — lien copié",
+    toast_result_copied:   "Résultat copié — partagez-le !",
+    toast_join_error:      "Entrez un code valide à 6 caractères",
+    // Dynamic (functions)
+    sheet_places:          (n, w, tot) => `${n} lieu${n > 1 ? 'x' : ''} · ${w}/${tot} prêts`,
+    sheet_users:           (w, tot) => `${w} sur ${tot} position${tot > 1 ? 's' : ''} partagée${tot > 1 ? 's' : ''}`,
+    online_count:          n => `${n} participant${n > 1 ? 's' : ''}`,
+    status_online:         n => `En ligne · ${n} participant${n > 1 ? 's' : ''}`,
+    search_waiting:        n => `En attente de ${n} participant${n > 1 ? 's' : ''} supplémentaire${n > 1 ? 's' : ''}`,
+    search_ready:          n => `Trouver des lieux (${n} positions)`,
+    toast_places_found:    n => `${n} lieu${n > 1 ? 'x' : ''} trouvé${n > 1 ? 's' : ''} — jetez un œil !`,
+    votes_count:           n => `${n} vote${n > 1 ? 's' : ''}`,
+    result_stats:          (v, p) => `${v} vote${v > 1 ? 's' : ''} · ${p} participant${p > 1 ? 's' : ''}`,
+    share_meeting_prefix:  "On se retrouve au",
+    share_found_with:      "Trouvé avec Amichemin —",
+    share_meeting_title:   name => `On se retrouve au ${name}`,
+  },
+  en: {
+    // Welcome screen
+    hero_title:            "Find the spot everyone can actually reach.",
+    hero_subtitle:         "Share a code, drop your location, vote on a place. Done in 60 seconds.",
+    pill_free:             "Free",
+    pill_no_account:       "No account",
+    pill_realtime:         "Real-time",
+    pill_open_data:        "Open map data",
+    // Start card
+    card_start_eyebrow:    "Start",
+    card_start_title:      "Start a session",
+    card_start_sub:        "Pick a meeting spot for your group — share a code to invite others",
+    label_meet_name:       "What's the meet?",
+    ph_meet_name:          "Party time",
+    label_your_name:       "Your name",
+    ph_your_name:          "e.g. Sophie",
+    btn_start_session:     "Start a session",
+    btn_get_started:       "Get started →",
+    // Join card
+    card_join_eyebrow:     "Join",
+    card_join_title:       "Join a session",
+    card_join_sub:         "Someone sent you a code — enter it to share your location and vote",
+    label_join_name:       "Your name",
+    label_session_code:    "Session code",
+    ph_session_code:       "ABC123",
+    btn_join_session:      "Join with a code →",
+    btn_enter_code:        "Enter code →",
+    // Share step
+    share_label:           "Share with your group",
+    share_hint:            "Anyone with the link can drop their pin.",
+    btn_copy_link:         "Copy link",
+    btn_lets_go:           "Let's go →",
+    welcome_note:          "Your location is never required. It vanishes when the session ends.",
+    // Session header
+    btn_leave_session:     "Leave session",
+    // Code panel
+    panel_code_title:      "Session code",
+    panel_code_sub:        "Share with friends",
+    copy_hint:             "Click to copy",
+    // Location panel
+    step_1:                "Step 1",
+    panel_location:        "Your location",
+    ph_address:            "Type an address…",
+    btn_use_gps:           "Use GPS",
+    btn_confirm_location:  "Confirm location",
+    pin_drop_hint:         "Or tap the map to drop a pin",
+    loc_finding:           "Finding your location…",
+    loc_locating:          "Locating…",
+    loc_set:               label => `✓ Set: ${label}`,
+    // Participants panel
+    step_2:                "Step 2",
+    panel_participants:    "Participants",
+    empty_waiting:         "Waiting for participants…",
+    no_location_set:       "No location set",
+    user_you:              "(you)",
+    // Find places panel
+    step_3:                "Step 3",
+    panel_find_places:     "Find places",
+    search_radius:         "Search radius",
+    btn_find_places:       "Find places nearby",
+    loading_text:          "Searching the neighbourhood…",
+    // Vote panel
+    step_4:                "Step 4",
+    panel_vote:            "Vote for a place",
+    empty_places:          "Search for places to see results here.",
+    btn_vote:              "Vote",
+    btn_voted:             "✓ Voted",
+    top_pick:              "Top pick",
+    from_midpoint:         "from midpoint",
+    btn_share_result:      "Share the result",
+    // Result
+    result_label:          "Result",
+    result_winner:         "We have a winner",
+    btn_open_maps:         "Open in Maps",
+    result_decided:        "Decided at",
+    // Status / misc
+    status_connecting:     "Connecting…",
+    sheet_tap:             "Tap to open",
+    midpoint_label:        "Midpoint",
+    // Categories
+    cat_food:              "Food",
+    cat_cafe:              "Café",
+    cat_drink:             "Bars",
+    cat_gym:               "Gym",
+    cat_park:              "Parks",
+    cat_culture:           "Culture",
+    // Toasts
+    toast_link_copied:     "Link copied!",
+    toast_code_copied:     "Link copied — send it to your group!",
+    toast_location_saved:  "Got it, you're on the map!",
+    toast_voted:           "Voted!",
+    toast_session_full:    "This session is full",
+    toast_gps_unavailable: "GPS isn't available in this browser — try typing your address instead",
+    toast_gps_failed:      "Couldn't get your GPS — just type your address above.",
+    toast_no_category:     "Pick at least one category to search",
+    toast_vote_error:      "Couldn't update your vote — please try again",
+    toast_vote_save_error: "Couldn't save your vote — please try again",
+    toast_places_error:    "Something went wrong fetching places — check your connection and try again",
+    toast_share_error:     "Couldn't open share sheet — link copied instead",
+    toast_result_copied:   "Result copied — paste it anywhere!",
+    toast_join_error:      "Please enter a valid 6-character code",
+    // Dynamic (functions)
+    sheet_places:          (n, w, tot) => `${n} place${n !== 1 ? 's' : ''} found · ${w}/${tot} ready`,
+    sheet_users:           (w, tot) => `${w} of ${tot} location${tot !== 1 ? 's' : ''} shared`,
+    online_count:          n => `${n} ${n !== 1 ? 'people' : 'person'} connected`,
+    status_online:         n => `Online · ${n} ${n !== 1 ? 'people' : 'person'} connected`,
+    search_waiting:        n => `Waiting for ${n} more ${n !== 1 ? 'people' : 'person'} to share their location`,
+    search_ready:          n => `Find places nearby (${n} locations)`,
+    toast_places_found:    n => `Found ${n} place${n !== 1 ? 's' : ''} — take a look!`,
+    votes_count:           n => `${n} vote${n !== 1 ? 's' : ''}`,
+    result_stats:          (v, p) => `${v} vote${v !== 1 ? 's' : ''} · ${p} participant${p !== 1 ? 's' : ''}`,
+    share_meeting_prefix:  "We're meeting at",
+    share_found_with:      "Found with Amichemin —",
+    share_meeting_title:   name => `Meeting at ${name}`,
+  },
+};
+
+// ─────────────────────────────────────────────────────────────
+//  I18N HELPERS
+// ─────────────────────────────────────────────────────────────
+let lang = 'fr'; // overridden by detectLang at bottom
+
+function t(key) {
+  const val = TRANSLATIONS[lang]?.[key];
+  if (val !== undefined && typeof val !== 'function') return val;
+  const fb = TRANSLATIONS.fr[key];
+  return (fb !== undefined && typeof fb !== 'function') ? fb : key;
+}
+
+function tf(key, ...args) {
+  const val = TRANSLATIONS[lang]?.[key] ?? TRANSLATIONS.fr[key];
+  return typeof val === 'function' ? val(...args) : (val ?? key);
+}
+
+function setLang(newLang) {
+  if (!TRANSLATIONS[newLang]) return;
+  lang = newLang;
+  localStorage.setItem('amichemin_lang', newLang);
+  document.documentElement.lang = newLang;
+
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const val = TRANSLATIONS[lang][el.dataset.i18n];
+    if (val !== undefined && typeof val !== 'function') el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const val = TRANSLATIONS[lang][el.dataset.i18nPlaceholder];
+    if (val !== undefined) el.placeholder = val;
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach(el => {
+    const val = TRANSLATIONS[lang][el.dataset.i18nAria];
+    if (val !== undefined) el.setAttribute('aria-label', val);
+  });
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  // Refresh dynamic session UI if a session is active
+  if (sessionId) {
+    buildFilters();
+    updateSheetSummary();
+    if (sessionData) {
+      const count = sessionData.users.length;
+      document.getElementById('online-count').textContent = tf('online_count', count);
+      document.getElementById('status-text').textContent  = tf('status_online', count);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 //  CONFIGURATION
-//  Add or modify categories here — the rest of the app adapts.
-//  osmKey: the OSM tag key  ("amenity", "leisure", "tourism"…)
-//  query:  pipe-separated OSM tag values to match
 // ─────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { id: 'food',    label: 'Food',    icon: '🍽', query: 'restaurant|fast_food|bakery',  osmKey: 'amenity' },
-  { id: 'cafe',    label: 'Café',    icon: '☕', query: 'cafe',                          osmKey: 'amenity' },
-  { id: 'drink',   label: 'Drink',   icon: '🍺', query: 'bar|pub|biergarten',           osmKey: 'amenity' },
-  { id: 'gym',     label: 'Gym',     icon: '🏋', query: 'fitness_centre|sports_centre', osmKey: 'leisure' },
-  { id: 'park',    label: 'Park',    icon: '🌿', query: 'park',                         osmKey: 'leisure' },
-  { id: 'culture', label: 'Culture', icon: '🎭', query: 'theatre|cinema|museum',        osmKey: 'amenity' },
-  // ↓ Add more categories below — just copy the pattern above.
-  // { id: 'hotel', label: 'Hotel', icon: '🏨', query: 'hotel|hostel', osmKey: 'tourism' },
+  { id: 'food',    icon: '🍽', query: 'restaurant|fast_food|bakery',  osmKey: 'amenity' },
+  { id: 'cafe',    icon: '☕', query: 'cafe',                          osmKey: 'amenity' },
+  { id: 'drink',   icon: '🍺', query: 'bar|pub|biergarten',           osmKey: 'amenity' },
+  { id: 'gym',     icon: '🏋', query: 'fitness_centre|sports_centre', osmKey: 'leisure' },
+  { id: 'park',    icon: '🌿', query: 'park',                         osmKey: 'leisure' },
+  { id: 'culture', icon: '🎭', query: 'theatre|cinema|museum',        osmKey: 'amenity' },
 ];
 
-// Overpass search radius in metres around the midpoint (adjustable via slider)
 let searchRadius = 1500;
-
-// Max places to display from Overpass results
-const MAX_PLACES = 20;
-
-// Max participants per session
+const MAX_PLACES      = 20;
 const MAX_PARTICIPANTS = 50;
-
-// Sync interval (ms) — lower = more responsive, higher = fewer API calls
-const SYNC_INTERVAL = 3000;
+const SYNC_INTERVAL   = 3000;
 
 // ─────────────────────────────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────────────────────────────
-let sessionId     = null;
-let myUserId      = null;
-let myName        = '';
-let meetName      = '';     // session display name set by the creator
-let myCoords      = null;   // { lat, lng, label }
-let pendingCoords = null;   // staged coords before user confirms
-let map           = null;
-let pinDropMarker = null;   // temporary marker while user is picking their location
-let userMarkers   = {};
+let sessionId      = null;
+let myUserId       = null;
+let myName         = '';
+let meetName       = '';
+let myCoords       = null;
+let pendingCoords  = null;
+let map            = null;
+let pinDropMarker  = null;
+let userMarkers    = {};
 let midpointMarker = null;
-let placeMarkers  = [];
-let activeFilters = new Set(['food']);
-let pollInterval  = null;
-let addrDebounce  = null;
-let sessionData   = null;   // latest snapshot from storage
-let lastVotedPlace = null;  // placeId the current user voted for
+let placeMarkers   = [];
+let activeFilters  = new Set(['food']);
+let pollInterval   = null;
+let addrDebounce   = null;
+let sessionData    = null;
+let lastVotedPlace = null;
 let heartbeatInterval = null;
-let sessionUnsub  = null;
-let mapFitted     = false;
-let radiusCircle  = null;
-let suggestionAbort  = null; // AbortController for in-flight autocomplete requests
-let locatedCount     = 0;   // tracks how many participants have coords; reset triggers map refit
+let sessionUnsub   = null;
+let mapFitted      = false;
+let radiusCircle   = null;
+let suggestionAbort = null;
+let locatedCount   = 0;
 
 // ─────────────────────────────────────────────────────────────
 //  SENTRY HELPERS
@@ -67,7 +344,6 @@ function captureApiError(error, apiSource, context = {}) {
   });
 }
 
-// Replace session ID in Firebase paths so session content never reaches Sentry
 function scrubPath(path) {
   return path.replace(/sessions\/[^/]+/, 'sessions/*');
 }
@@ -104,13 +380,12 @@ function genCode()   { return Math.random().toString(36).substring(2, 8).toUpper
 function genUserId() { return 'u_' + Math.random().toString(36).substring(2, 10); }
 
 function showToast(msg, dur = 2500) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), dur);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
 }
 
-// Haversine distance in metres between two lat/lng points
 function haversine(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -121,7 +396,6 @@ function haversine(lat1, lng1, lat2, lng2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// Spherical midpoint from array of { lat, lng } objects
 function calcMidpoint(coords) {
   let x = 0, y = 0, z = 0;
   coords.forEach(c => {
@@ -220,11 +494,10 @@ function createSession() {
   myName    = name;
   myUserId  = genUserId();
   sessionId = genCode();
-  localStorage.setItem('meethalf_name', name);
-  sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId, myUserId, myName, meetName }));
+  localStorage.setItem('amichemin_name', name);
+  sessionStorage.setItem('amichemin_session', JSON.stringify({ sessionId, myUserId, myName, meetName }));
   history.pushState({ sessionId }, '', '?s=' + sessionId);
 
-  // Show the share step before entering the session
   document.getElementById('share-code-val').textContent = sessionId;
   document.getElementById('card-start').classList.add('is-shared');
 }
@@ -237,28 +510,27 @@ function enterSession() {
 function copyShareCode() {
   const url = location.origin + location.pathname + '?s=' + sessionId;
   navigator.clipboard.writeText(url)
-    .then(() => showToast('Link copied!'))
+    .then(() => showToast(t('toast_link_copied')))
     .catch(() => {
-      // Fallback for browsers without clipboard API
       const el = document.createElement('textarea');
       el.value = url;
       document.body.appendChild(el);
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
-      showToast('Link copied!');
+      showToast(t('toast_link_copied'));
     });
 }
 
 function joinSession() {
   const code = document.getElementById('join-code-input').value.trim().toUpperCase();
   const name = document.getElementById('name-join').value.trim() || 'Anonymous';
-  if (!code || code.length < 4) { showToast('Please enter a valid 6-character code'); return; }
+  if (!code || code.length < 4) { showToast(t('toast_join_error')); return; }
   myName    = name;
   myUserId  = genUserId();
   sessionId = code;
-  localStorage.setItem('meethalf_name', name);
-  sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId, myUserId, myName }));
+  localStorage.setItem('amichemin_name', name);
+  sessionStorage.setItem('amichemin_session', JSON.stringify({ sessionId, myUserId, myName }));
   history.pushState({ sessionId }, '', '?s=' + sessionId);
   initSessionScreen();
 }
@@ -268,7 +540,7 @@ async function initSessionScreen() {
   document.getElementById('screen-session').classList.add('active');
 
   document.getElementById('code-display').innerHTML =
-    sessionId + '<span class="copy-hint">Click to copy</span>';
+    sessionId + `<span class="copy-hint">${t('copy_hint')}</span>`;
   const badge = document.getElementById('header-code-badge');
   badge.textContent = meetName ? `${meetName} · ${sessionId}` : sessionId;
   badge.style.display = 'inline';
@@ -276,7 +548,6 @@ async function initSessionScreen() {
   buildFilters();
   initMap();
 
-  // On mobile, open the bottom sheet automatically so users see the steps immediately
   if (window.innerWidth <= 768) {
     const sidebar = document.querySelector('.sidebar');
     const fab     = document.getElementById('fab-btn');
@@ -288,11 +559,10 @@ async function initSessionScreen() {
 
   mapFitted = false;
 
-  // Participant cap: check current user count before joining.
   const snapshot = await db.ref(sessionPath('users')).get();
   const currentCount = snapshot.exists() ? Object.keys(snapshot.val()).length : 0;
   if (currentCount >= MAX_PARTICIPANTS) {
-    showToast('This session is full');
+    showToast(t('toast_session_full'));
     leaveSession();
     return;
   }
@@ -310,7 +580,6 @@ function togglePanel() {
   const fab     = document.getElementById('fab-btn');
   const isOpen  = sidebar.classList.toggle('is-open');
   if (fab) fab.textContent = isOpen ? '✕' : '☰';
-  // Let the CSS transition finish before recalculating map size
   setTimeout(() => { if (map) map.invalidateSize(); }, 360);
 }
 
@@ -321,11 +590,11 @@ function updateSheetSummary() {
   const places = sessionData ? Object.values(sessionData.places || {}) : [];
   const withLoc = users.filter(u => u.coords).length;
   if (places.length) {
-    el.textContent = `${places.length} place${places.length > 1 ? 's' : ''} found · ${withLoc}/${users.length} ready`;
+    el.textContent = tf('sheet_places', places.length, withLoc, users.length);
   } else if (users.length) {
-    el.textContent = `${withLoc} of ${users.length} location${users.length > 1 ? 's' : ''} shared`;
+    el.textContent = tf('sheet_users', withLoc, users.length);
   } else {
-    el.textContent = 'Tap to open';
+    el.textContent = t('sheet_tap');
   }
 }
 
@@ -336,21 +605,18 @@ function leaveSession() {
 
   history.pushState({}, '', location.pathname);
 
-  // Close the bottom sheet if open
   const sidebar = document.querySelector('.sidebar');
   if (sidebar) sidebar.classList.remove('is-open');
   const fab = document.getElementById('fab-btn');
   if (fab) fab.textContent = '☰';
 
-  // Cancel the server-side onDisconnect handler and remove the user entry immediately.
   if (sessionId && myUserId) {
     const ref = db.ref(sessionPath('users', myUserId));
     ref.onDisconnect().cancel();
     ref.remove();
   }
-  sessionStorage.removeItem('meethalf_session');
+  sessionStorage.removeItem('amichemin_session');
 
-  // Reset all state
   sessionId      = null;
   meetName       = '';
   myCoords       = null;
@@ -359,7 +625,6 @@ function leaveSession() {
   sessionData    = null;
   locatedCount   = 0;
 
-  // Destroy map
   if (pinDropMarker) { pinDropMarker.remove(); pinDropMarker = null; }
   if (map) { map.remove(); map = null; }
   Object.values(userMarkers).forEach(m => m.remove());
@@ -369,20 +634,19 @@ function leaveSession() {
   if (midpointMarker) { midpointMarker.remove(); midpointMarker = null; }
   if (radiusCircle)   { radiusCircle.remove();   radiusCircle = null; }
 
-  // Reset UI
   document.getElementById('screen-session').classList.remove('active');
   document.getElementById('screen-welcome').classList.add('active');
   document.getElementById('addr-input').value = '';
   document.getElementById('loc-status').textContent = '';
   document.getElementById('place-list').style.display = '';
   document.getElementById('place-list').innerHTML =
-    '<div class="empty-state">Hit "Find places nearby" once everyone has dropped their location.</div>';
+    `<div class="empty-state">${t('empty_places')}</div>`;
   document.getElementById('result-panel-content').style.display = 'none';
   document.getElementById('result-panel-content').innerHTML = '';
-  document.getElementById('results-panel-step').textContent = 'Step 4';
-  document.getElementById('results-panel-heading').textContent = 'Vote for a place';
+  document.getElementById('results-panel-step').textContent = t('step_4');
+  document.getElementById('results-panel-heading').textContent = t('panel_vote');
   document.getElementById('user-list').innerHTML =
-    '<div class="empty-state">Waiting for people to join…</div>';
+    `<div class="empty-state">${t('empty_waiting')}</div>`;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -392,8 +656,6 @@ async function pushMyUser() {
   if (!sessionId || !myUserId) return;
   try {
     const ref = db.ref(sessionPath('users', myUserId));
-    // Register server-side cleanup: Firebase removes this entry the moment
-    // the client's connection drops (tab close, network loss, browser kill).
     await ref.onDisconnect().remove();
     await ref.set({ id: myUserId, name: myName, coords: myCoords || null, ts: Date.now() });
   } catch(e) { console.warn('pushMyUser failed', e); }
@@ -402,9 +664,6 @@ async function pushMyUser() {
 function startHeartbeat() {
   clearInterval(heartbeatInterval);
   heartbeatInterval = setInterval(pushMyUser, 30000);
-
-  // Re-push immediately when the user returns to this tab,
-  // bypassing browser timer throttling on background tabs.
   document.removeEventListener('visibilitychange', onVisibilityChange);
   document.addEventListener('visibilitychange', onVisibilityChange);
 }
@@ -442,8 +701,8 @@ function listenToSession() {
     updateSearchBtn(users);
     updateSheetSummary();
     const count = users.length;
-    document.getElementById('online-count').textContent = count + ' person' + (count !== 1 ? 's' : '');
-    document.getElementById('status-text').textContent = `Online · ${count} ${count !== 1 ? 'people' : 'person'} connected`;
+    document.getElementById('online-count').textContent = tf('online_count', count);
+    document.getElementById('status-text').textContent  = tf('status_online', count);
   };
   fbRef.on('value', handler);
   sessionUnsub = () => fbRef.off('value', handler);
@@ -455,7 +714,7 @@ function listenToSession() {
 function renderUsers(users) {
   const list = document.getElementById('user-list');
   if (!users.length) {
-    list.innerHTML = '<div class="empty-state">Waiting for people to join…</div>';
+    list.innerHTML = `<div class="empty-state">${t('empty_waiting')}</div>`;
     return;
   }
   list.innerHTML = '';
@@ -466,8 +725,8 @@ function renderUsers(users) {
     div.innerHTML = `
       <div class="user-dot ${u.coords ? 'located' : ''} ${isMe ? 'me' : ''}"></div>
       <div>
-        <div class="user-name">${escapeHtml(u.name)}${isMe ? ' <span style="color:var(--muted);font-weight:400;">(you)</span>' : ''}</div>
-        <div class="user-loc">${u.coords ? '📍 ' + escapeHtml(u.coords.label || 'Located') : 'No location set'}</div>
+        <div class="user-name">${escapeHtml(u.name)}${isMe ? ` <span style="color:var(--muted);font-weight:400;">${t('user_you')}</span>` : ''}</div>
+        <div class="user-loc">${u.coords ? '📍 ' + escapeHtml(u.coords.label || t('panel_location')) : t('no_location_set')}</div>
       </div>
     `;
     list.appendChild(div);
@@ -478,12 +737,9 @@ function updateSearchBtn(users) {
   const located = users.filter(u => u.coords).length;
   const btn = document.getElementById('search-btn');
   btn.disabled = located < 2;
-  if (located < 2) {
-    const needed = 2 - located;
-    btn.textContent = `Waiting for ${needed} more ${needed !== 1 ? 'people' : 'person'} to share their location`;
-  } else {
-    btn.textContent = `Find places nearby (${located} locations)`;
-  }
+  btn.textContent = located < 2
+    ? tf('search_waiting', 2 - located)
+    : tf('search_ready', located);
 }
 
 function buildFilters() {
@@ -493,7 +749,7 @@ function buildFilters() {
     const tag = document.createElement('div');
     tag.className = 'filter-tag' + (activeFilters.has(cat.id) ? ' active' : '');
     tag.dataset.id = cat.id;
-    tag.innerHTML = `<span class="icon">${cat.icon}</span>${cat.label}`;
+    tag.innerHTML = `<span class="icon">${cat.icon}</span>${t('cat_' + cat.id)}`;
     tag.addEventListener('click', () => {
       if (activeFilters.has(cat.id)) {
         activeFilters.delete(cat.id);
@@ -510,20 +766,18 @@ function buildFilters() {
 function renderPlaces(places, votes) {
   const list = document.getElementById('place-list');
   if (!places || !places.length) {
-    list.innerHTML = '<div class="empty-state">Nothing found nearby — try different filters or a wider search radius.</div>';
+    list.innerHTML = `<div class="empty-state">${t('empty_places')}</div>`;
     return;
   }
 
   const maxVotes = Math.max(1, ...Object.values(votes));
 
-  // Sort: votes → distance
   const sorted = [...places].sort((a, b) => {
     const vd = (votes[b.id] || 0) - (votes[a.id] || 0);
     if (vd !== 0) return vd;
     return a.dist - b.dist;
   });
 
-  // Determine if top place has a clear majority (more votes than all others combined)
   const topVotes   = votes[sorted[0].id] || 0;
   const otherVotes = sorted.slice(1).reduce((sum, p) => sum + (votes[p.id] || 0), 0);
   const hasWinner  = topVotes > 0 && topVotes > otherVotes;
@@ -547,19 +801,19 @@ function renderPlaces(places, votes) {
     const card = document.createElement('div');
     card.className = 'place-card' + (hasVoted ? ' voted' : '') + (isWinner ? ' winner' : '');
     card.innerHTML = `
-      ${isWinner ? '<span class="winner-crown">Top pick</span>' : ''}
+      ${isWinner ? `<span class="winner-crown">${t('top_pick')}</span>` : ''}
       <div class="place-name">${p.catIcon} ${escapeHtml(p.name)}</div>
       <div class="place-meta">${escapeHtml(p.type.replace(/_/g, ' '))}${p.addr ? ' · ' + escapeHtml(p.addr) : ''}</div>
-      <div class="place-dist">${distStr} from midpoint</div>
+      <div class="place-dist">${distStr} ${t('from_midpoint')}</div>
       ${extraInfo ? `<div class="place-extra">${extraInfo}</div>` : ''}
       <div class="vote-row">
         <button class="btn sm ${hasVoted ? 'primary' : ''}" data-id="${p.id}" onclick="vote('${p.id}')">
-          ${hasVoted ? '✓ Voted' : 'Vote'}
+          ${hasVoted ? t('btn_voted') : t('btn_vote')}
         </button>
         <div class="vote-bar-wrap">
           <div class="vote-bar" style="width:${pct}%"></div>
         </div>
-        <span class="vote-count">${v} vote${v !== 1 ? 's' : ''}</span>
+        <span class="vote-count">${tf('votes_count', v)}</span>
       </div>
     `;
     card.addEventListener('click', e => {
@@ -571,7 +825,7 @@ function renderPlaces(places, votes) {
     if (isWinner) {
       const shareBtn = document.createElement('button');
       shareBtn.className = 'btn full share-btn';
-      shareBtn.textContent = 'Share the result';
+      shareBtn.textContent = t('btn_share_result');
       shareBtn.addEventListener('click', () => shareResult(p));
       list.appendChild(shareBtn);
     }
@@ -579,26 +833,26 @@ function renderPlaces(places, votes) {
 }
 
 async function shareResult(place) {
-  const mapsUrl  = `https://maps.google.com/maps?q=${encodeURIComponent(place.name + (place.addr ? ', ' + place.addr : ''))}`;
-  const appUrl   = location.origin + location.pathname + (sessionId ? '?s=' + sessionId : '');
-  const summary  = [
-    `We're meeting at ${place.name}`,
+  const mapsUrl = `https://maps.google.com/maps?q=${encodeURIComponent(place.name + (place.addr ? ', ' + place.addr : ''))}`;
+  const appUrl  = location.origin + location.pathname + (sessionId ? '?s=' + sessionId : '');
+  const summary = [
+    `${t('share_meeting_prefix')} ${place.name}`,
     place.addr ? place.addr : null,
     mapsUrl,
-    `Found with MeetHalf — ${appUrl}`,
+    `${t('share_found_with')} ${appUrl}`,
   ].filter(Boolean).join('\n');
 
   if (navigator.share) {
     try {
-      await navigator.share({ title: `Meeting at ${place.name}`, text: summary });
+      await navigator.share({ title: tf('share_meeting_title', place.name), text: summary });
     } catch (e) {
-      if (e.name !== 'AbortError') showToast('Couldn\'t open share sheet — link copied instead');
+      if (e.name !== 'AbortError') showToast(t('toast_share_error'));
       else return;
     }
   } else {
     try {
       await navigator.clipboard.writeText(summary);
-      showToast('Result copied — paste it anywhere!');
+      showToast(t('toast_result_copied'));
     } catch {
       showToast(summary, 6000);
     }
@@ -608,16 +862,12 @@ async function shareResult(place) {
 // ─────────────────────────────────────────────────────────────
 //  SESSION SUMMARY — write & render
 // ─────────────────────────────────────────────────────────────
-
-// Called after every vote update. Writes summary to Firebase once a clear
-// winner exists (≥2 votes, strictly more than all others combined).
-// Idempotent: if summary already exists in Firebase, the listener skips this.
 async function maybeWriteSummary(places, votes, users) {
   if (!places || !places.length) return;
 
-  const sorted    = [...places].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0));
-  const winner    = sorted[0];
-  const topVotes  = votes[winner.id] || 0;
+  const sorted     = [...places].sort((a, b) => (votes[b.id] || 0) - (votes[a.id] || 0));
+  const winner     = sorted[0];
+  const topVotes   = votes[winner.id] || 0;
   const otherVotes = sorted.slice(1).reduce((s, p) => s + (votes[p.id] || 0), 0);
   if (topVotes < 2 || topVotes <= otherVotes) return;
 
@@ -638,8 +888,6 @@ async function maybeWriteSummary(places, votes, users) {
   };
 
   try {
-    // Transaction: only write if no summary exists yet, preventing timestamp drift
-    // from concurrent calls before the first write is confirmed.
     await db.ref(sessionPath('summary')).transaction(current => current === null ? summary : undefined);
   } catch (e) {
     console.warn('Could not write session summary', e);
@@ -647,16 +895,14 @@ async function maybeWriteSummary(places, votes, users) {
 }
 
 function renderResult(summary) {
-  // Switch panel heading
-  document.getElementById('results-panel-step').textContent = 'Result';
-  document.getElementById('results-panel-heading').textContent = 'We have a winner';
+  document.getElementById('results-panel-step').textContent    = t('result_label');
+  document.getElementById('results-panel-heading').textContent = t('result_winner');
 
-  // Hide vote list, show result content
   document.getElementById('place-list').style.display = 'none';
   const el = document.getElementById('result-panel-content');
   el.style.display = 'block';
 
-  const distStr = summary.distFromMidpoint < 1000
+  const distStr  = summary.distFromMidpoint < 1000
     ? summary.distFromMidpoint + 'm'
     : (summary.distFromMidpoint / 1000).toFixed(1) + 'km';
 
@@ -666,13 +912,13 @@ function renderResult(summary) {
     <div class="result-card">
       <div class="result-name">${escapeHtml(summary.placeName)}</div>
       ${summary.placeAddr ? `<div class="result-addr">${escapeHtml(summary.placeAddr)}</div>` : ''}
-      <div class="result-dist">${distStr} from midpoint</div>
-      <div class="result-votes">${topVotes} vote${topVotes !== 1 ? 's' : ''} · ${summary.participantCount} participant${summary.participantCount !== 1 ? 's' : ''}</div>
+      <div class="result-dist">${distStr} ${t('from_midpoint')}</div>
+      <div class="result-votes">${tf('result_stats', topVotes, summary.participantCount)}</div>
       <a class="btn primary full result-maps-btn" href="${escapeHtml(summary.mapsUrl)}" target="_blank" rel="noopener">
-        Open in Maps
+        ${t('btn_open_maps')}
       </a>
     </div>
-    <p class="result-timestamp">Decided ${new Date(summary.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+    <p class="result-timestamp">${t('result_decided')} ${new Date(summary.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
   `;
 }
 
@@ -685,8 +931,6 @@ function updateMapMarkers(users) {
 
   const located = users.filter(u => u.coords);
 
-  // Reset mapFitted whenever a new participant drops their location so the
-  // map re-fits to include them on the next updateMapMarkers pass.
   if (located.length > locatedCount) mapFitted = false;
   locatedCount = located.length;
 
@@ -712,7 +956,6 @@ function updateMapMarkers(users) {
       .bindTooltip(u.name, { permanent: false });
   });
 
-  // Draw/update midpoint marker
   if (located.length >= 2) {
     const mid = calcMidpoint(located.map(u => u.coords));
     if (midpointMarker) midpointMarker.remove();
@@ -728,7 +971,7 @@ function updateMapMarkers(users) {
     });
     midpointMarker = L.marker([mid.lat, mid.lng], { icon: mIcon })
       .addTo(map)
-      .bindTooltip('Midpoint', { permanent: true });
+      .bindTooltip(t('midpoint_label'), { permanent: true });
 
     if (!mapFitted) {
       const bounds = L.latLngBounds(located.map(u => [u.coords.lat, u.coords.lng]));
@@ -771,12 +1014,12 @@ function addPlaceMarkersToMap(places, mid) {
     const m = L.marker([p.lat, p.lng], { icon })
       .addTo(map)
       .bindPopup(`
-        <strong style="font-family:Fraunces,serif;">${p.name}</strong><br>
-        <small style="font-family:DM Mono,monospace;color:#7a7870;">
-          ${p.type.replace(/_/g, ' ')} · ${distStr} from midpoint
+        <strong style="font-family:Inter,sans-serif;">${p.name}</strong><br>
+        <small style="font-family:ui-monospace,monospace;color:#7a7870;">
+          ${p.type.replace(/_/g, ' ')} · ${distStr} ${t('from_midpoint')}
         </small>
-        ${popupDetails ? `<div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;line-height:1.8;">${popupDetails}</div>` : ''}
-        <div style="margin-top:5px;font-size:11px;font-family:DM Mono,monospace;">${links}</div>
+        ${popupDetails ? `<div style="margin-top:5px;font-size:11px;font-family:ui-monospace,monospace;line-height:1.8;">${popupDetails}</div>` : ''}
+        <div style="margin-top:5px;font-size:11px;font-family:ui-monospace,monospace;">${links}</div>
       `);
     placeMarkers.push(m);
   });
@@ -787,10 +1030,10 @@ function addPlaceMarkersToMap(places, mid) {
 // ─────────────────────────────────────────────────────────────
 function useGPS() {
   if (!navigator.geolocation) {
-    showToast('GPS isn\'t available in this browser — try typing your address instead');
+    showToast(t('toast_gps_unavailable'));
     return;
   }
-  document.getElementById('loc-status').textContent = 'Finding your location…';
+  document.getElementById('loc-status').textContent = t('loc_finding');
   navigator.geolocation.getCurrentPosition(
     async pos => {
       const { latitude: lat, longitude: lng } = pos.coords;
@@ -801,8 +1044,7 @@ function useGPS() {
       document.getElementById('loc-status').textContent = `📍 ${label}`;
     },
     err => {
-      document.getElementById('loc-status').textContent =
-        'Couldn\'t get your GPS — just type your address above.';
+      document.getElementById('loc-status').textContent = t('toast_gps_failed');
       captureApiError(new Error('Geolocation failed'), 'geolocation', {
         error_code: err.code,
         error_message: err.message,
@@ -816,7 +1058,7 @@ async function reverseGeocode(lat, lng) {
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' } }
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Amichemin/1.0' } }
     );
     if (!r.ok) throw new Error(`Nominatim reverse geocode failed with HTTP ${r.status}`);
     const d = await r.json();
@@ -830,10 +1072,9 @@ async function reverseGeocode(lat, lng) {
 }
 
 async function onMapClick(e) {
-  if (myCoords) return; // already confirmed — don't override
+  if (myCoords) return;
   const { lat, lng } = e.latlng;
 
-  // Place or move the drop-pin marker
   if (pinDropMarker) {
     pinDropMarker.setLatLng([lat, lng]);
   } else {
@@ -846,7 +1087,7 @@ async function onMapClick(e) {
     pinDropMarker = L.marker([lat, lng], { icon, zIndexOffset: 500 }).addTo(map);
   }
 
-  document.getElementById('loc-status').textContent = 'Locating…';
+  document.getElementById('loc-status').textContent = t('loc_locating');
   document.getElementById('confirm-loc-btn').disabled = true;
 
   const label = await reverseGeocode(lat, lng);
@@ -882,7 +1123,7 @@ async function fetchSuggestions(q) {
   try {
     const r = await fetch(
       `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=5&addressdetails=1`,
-      { headers: { 'Accept-Language': 'en', 'User-Agent': 'MeetHalf/1.0' }, signal: suggestionAbort.signal }
+      { headers: { 'Accept-Language': 'en', 'User-Agent': 'Amichemin/1.0' }, signal: suggestionAbort.signal }
     );
     const results = await r.json();
     const list = document.getElementById('suggestion-list');
@@ -906,7 +1147,7 @@ async function fetchSuggestions(q) {
     });
     list.style.display = 'block';
   } catch (e) {
-    if (e.name === 'AbortError') return; // intentionally cancelled — not an error
+    if (e.name === 'AbortError') return;
     console.warn('fetchSuggestions failed', e);
     captureApiError(e, 'nominatim', { operation: 'autocomplete' });
   }
@@ -915,15 +1156,14 @@ async function fetchSuggestions(q) {
 async function setMyLocation() {
   if (!pendingCoords) return;
   myCoords = pendingCoords;
-  document.getElementById('loc-status').textContent = `✓ Set: ${myCoords.label}`;
+  document.getElementById('loc-status').textContent = tf('loc_set', myCoords.label);
   document.getElementById('confirm-loc-btn').disabled = true;
 
-  // Remove drop-pin preview and crosshair cursor once location is confirmed
   if (pinDropMarker) { pinDropMarker.remove(); pinDropMarker = null; }
   document.getElementById('map').classList.remove('map--pin-mode');
 
   await pushMyUser();
-  showToast('Got it, you\'re on the map!');
+  showToast(t('toast_location_saved'));
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -938,14 +1178,13 @@ async function searchPlaces() {
 
   const selectedCats = CATEGORIES.filter(c => activeFilters.has(c.id));
   if (!selectedCats.length) {
-    showToast('Pick at least one category to search');
+    showToast(t('toast_no_category'));
     return;
   }
 
   const loadingEl = document.getElementById('map-loading');
   loadingEl.style.display = 'flex';
 
-  // Build Overpass QL query — one node clause per category
   const clauses = selectedCats.flatMap(cat => [
     `node["${cat.osmKey}"~"${cat.query}"](around:${searchRadius},${mid.lat},${mid.lng});`,
     `way["${cat.osmKey}"~"${cat.query}"](around:${searchRadius},${mid.lat},${mid.lng});`,
@@ -991,8 +1230,6 @@ async function searchPlaces() {
       }
     };
 
-    // Query all endpoints in parallel, take the one with the most elements.
-    // This prevents a fast-but-stale endpoint from winning over a correct one.
     const settled = await Promise.allSettled(OVERPASS_ENDPOINTS.map(tryEndpoint));
     const best = settled
       .filter(r => r.status === 'fulfilled')
@@ -1041,7 +1278,6 @@ async function searchPlaces() {
 
     console.log('[Overpass] named places with coords:', allPlaces.length);
 
-    // Keep at most 5 results per category, apply global cap, then re-sort by distance
     const perCatCount = {};
     const places = allPlaces
       .filter(p => {
@@ -1057,9 +1293,9 @@ async function searchPlaces() {
 
     renderPlaces(places, sessionData?.votes || {});
     addPlaceMarkersToMap(places, mid);
-    showToast(`Found ${places.length} place${places.length !== 1 ? 's' : ''} — take a look!`);
+    showToast(tf('toast_places_found', places.length));
   } catch (e) {
-    showToast('Something went wrong fetching places — check your connection and try again');
+    showToast(t('toast_places_error'));
     console.error('searchPlaces failed', e);
     captureApiError(e, 'overpass', {
       radius_m: searchRadius,
@@ -1081,23 +1317,20 @@ async function vote(placeId) {
       await fbRemove(sessionPath('votes', myUserId));
     } catch (e) {
       captureApiError(e, 'firebase', { operation: 'remove_vote', prev: lastVotedPlace, next: placeId });
-      showToast("Couldn't update your vote — please try again");
+      showToast(t('toast_vote_error'));
       return;
     }
   }
-  // Only advance state once the removal has confirmed success.
   lastVotedPlace = placeId;
   try {
     await fbSet(sessionPath('votes', myUserId), { placeId, userId: myUserId, ts: Date.now() });
-    showToast('Voted!');
+    showToast(t('toast_voted'));
   } catch (e) {
     captureApiError(e, 'firebase', { operation: 'set_vote', placeId });
-    showToast("Couldn't save your vote — please try again");
-    // Roll back local state so a retry attempt will attempt the write again.
+    showToast(t('toast_vote_save_error'));
     lastVotedPlace = null;
   }
 }
-
 
 // ─────────────────────────────────────────────────────────────
 //  UTILS
@@ -1105,11 +1338,10 @@ async function vote(placeId) {
 function copyCode() {
   const url = location.origin + location.pathname + '?s=' + sessionId;
   navigator.clipboard.writeText(url)
-    .then(() => showToast('Link copied — send it to your group!'))
+    .then(() => showToast(t('toast_code_copied')))
     .catch(() => showToast(url));
 }
 
-// Minimal XSS protection for user-supplied strings in innerHTML
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -1118,14 +1350,12 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Allow only http/https URLs from external sources (OSM data, etc.)
 function safeUrl(url) {
   if (!url) return null;
   const s = String(url).trim();
   return (s.startsWith('https://') || s.startsWith('http://')) ? s : null;
 }
 
-// Close autocomplete when clicking elsewhere
 document.addEventListener('click', e => {
   const input = document.getElementById('addr-input');
   const list  = document.getElementById('suggestion-list');
@@ -1135,8 +1365,18 @@ document.addEventListener('click', e => {
 });
 
 // ─────────────────────────────────────────────────────────────
+//  LANGUAGE DETECTION
+// ─────────────────────────────────────────────────────────────
+(function detectLang() {
+  const stored = localStorage.getItem('amichemin_lang');
+  lang = (stored && TRANSLATIONS[stored]) ? stored
+       : (navigator.language?.startsWith('fr') ? 'fr' : 'fr');
+  setLang(lang);
+})();
+
+// ─────────────────────────────────────────────────────────────
 //  URL-BASED SESSION DETECTION
-//  Handles direct links: meethalf.app/join/ABC123
+//  Handles direct links: amichemin.app/?s=ABC123
 // ─────────────────────────────────────────────────────────────
 (function detectSessionFromUrl() {
   const code = new URLSearchParams(location.search).get('s');
@@ -1144,8 +1384,7 @@ document.addEventListener('click', e => {
   const upper = code.toUpperCase();
   history.replaceState({}, '', '?s=' + upper);
 
-  // Refresh recovery: restore the same userId so the Firebase entry is reused.
-  const stored = sessionStorage.getItem('meethalf_session');
+  const stored = sessionStorage.getItem('amichemin_session');
   if (stored) {
     try {
       const parsed = JSON.parse(stored);
@@ -1157,25 +1396,21 @@ document.addEventListener('click', e => {
         initSessionScreen();
         return;
       }
-      // Stale entry from a different session — silently remove the ghost user
-      // node so it doesn't linger as a phantom presence in the old session.
       if (parsed.sessionId && parsed.myUserId) {
         db.ref(`sessions/${parsed.sessionId}/users/${parsed.myUserId}`).remove().catch(() => {});
       }
-      sessionStorage.removeItem('meethalf_session');
-    } catch (e) { /* corrupted storage — fall through */ }
+      sessionStorage.removeItem('amichemin_session');
+    } catch (e) { /* corrupted storage */ }
   }
 
-  const savedName = localStorage.getItem('meethalf_name');
+  const savedName = localStorage.getItem('amichemin_name');
   if (savedName) {
-    // Known user arriving via a shared link — generate a fresh userId.
     myName    = savedName;
     myUserId  = genUserId();
     sessionId = upper;
-    sessionStorage.setItem('meethalf_session', JSON.stringify({ sessionId: upper, myUserId, myName }));
+    sessionStorage.setItem('amichemin_session', JSON.stringify({ sessionId: upper, myUserId, myName }));
     initSessionScreen();
   } else {
-    // New visitor — expand join card, pre-fill code, focus name input.
     const codeInput = document.getElementById('join-code-input');
     if (codeInput) codeInput.value = upper;
     expandCard('join');

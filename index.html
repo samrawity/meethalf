@@ -1,19 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MeetHalf</title>
+  <title>Amichemin</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#1a1a18" />
+  <meta name="theme-color" content="#050812" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="MeetHalf" />
+  <meta name="apple-mobile-web-app-title" content="Amichemin" />
   <link rel="icon" href="favicon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="icon-192.svg" />
+
+  <!-- Open Graph / Social -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Amichemin" />
+  <meta property="og:description" content="Trouvez l'endroit où tout le monde arrive à mi-chemin." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Amichemin" />
+  <meta name="twitter:description" content="Trouvez l'endroit où tout le monde arrive à mi-chemin." />
 
   <!-- Analytics -->
   <script src="https://t.contentsquare.net/uxa/fa26a149a0c10.js"></script>
@@ -44,15 +52,23 @@
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="screen active welcome-screen" id="screen-welcome">
 
+    <div class="welcome-top-bar">
+      <span class="logo">Ami<span>chemin</span></span>
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('fr')" data-lang="fr">FR</button>
+        <span class="lang-sep">|</span>
+        <button class="lang-btn" onclick="setLang('en')" data-lang="en">EN</button>
+      </div>
+    </div>
+
     <div class="welcome-hero">
-      <h1 class="hero-title">Pick a spot<br/><em>everyone</em> can reach.</h1>
-      <p class="hero-sub">
-        Share a code, drop your location, vote on a place — done in 60 seconds.
-      </p>
+      <h1 class="hero-title" data-i18n="hero_title">Trouvez l'endroit où tout le monde arrive à mi-chemin.</h1>
+      <p class="hero-sub" data-i18n="hero_subtitle">Partagez un code, épinglez votre position, votez pour un lieu. En 60 secondes, c'est réglé.</p>
       <div class="tagline-pills">
-        <span class="pill">No account needed</span>
-        <span class="pill">Real-time sync</span>
-        <span class="pill">Privacy-first</span>
+        <span class="pill" data-i18n="pill_free">Gratuit</span>
+        <span class="pill" data-i18n="pill_no_account">Sans compte</span>
+        <span class="pill" data-i18n="pill_realtime">Temps réel</span>
+        <span class="pill" data-i18n="pill_open_data">Données ouvertes</span>
       </div>
     </div>
 
@@ -60,61 +76,64 @@
 
       <!-- Start card -->
       <div class="action-card card--dark" id="card-start">
-        <span class="card-eyebrow">Start</span>
-        <h2 class="card-title">Start a session</h2>
-        <p class="card-sub">Pick a meeting spot for your group — share a code to invite others</p>
+        <span class="card-eyebrow" data-i18n="card_start_eyebrow">Créer</span>
+        <h2 class="card-title" data-i18n="card_start_title">Créer une session</h2>
+        <p class="card-sub" data-i18n="card_start_sub">Choisissez un point de rencontre — partagez un code pour inviter les autres</p>
         <div class="card-form" id="form-start">
           <div class="form-group">
-            <label class="form-label" for="meet-name">What's the meet?</label>
-            <input type="text" id="meet-name" placeholder="Party time" maxlength="40"
+            <label class="form-label" for="meet-name" data-i18n="label_meet_name">C'est quoi le plan ?</label>
+            <input type="text" id="meet-name"
+              data-i18n-placeholder="ph_meet_name" placeholder="Soirée entre amis" maxlength="40"
               onkeydown="if(event.key==='Enter') document.getElementById('name-start').focus()" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="name-start">Your name</label>
-            <input type="text" id="name-start" placeholder="e.g. Sophie" maxlength="20"
+            <label class="form-label" for="name-start" data-i18n="label_your_name">Votre prénom</label>
+            <input type="text" id="name-start"
+              data-i18n-placeholder="ph_your_name" placeholder="ex. Sophie" maxlength="20"
               onkeydown="if(event.key==='Enter') createSession()" />
           </div>
-          <button class="btn full" onclick="createSession()">Start a session →</button>
+          <button class="btn full" onclick="createSession()" data-i18n="btn_start_session">Créer une session</button>
         </div>
         <div class="card-share" id="card-share">
-          <p class="share-label">Share with your group</p>
+          <p class="share-label" data-i18n="share_label">Partagez avec votre groupe</p>
           <div class="share-code-row">
             <span class="share-code-val" id="share-code-val"></span>
-            <button class="btn sm" onclick="copyShareCode()">Copy link</button>
+            <button class="btn sm" onclick="copyShareCode()" data-i18n="btn_copy_link">Copier le lien</button>
           </div>
-          <p class="share-hint">Anyone with the link can drop their pin.</p>
-          <button class="btn primary full" onclick="enterSession()">Let's go →</button>
+          <p class="share-hint" data-i18n="share_hint">Quiconque a le lien peut épingler sa position.</p>
+          <button class="btn primary full" onclick="enterSession()" data-i18n="btn_lets_go">C'est parti →</button>
         </div>
-        <button class="card-cta" onclick="expandCard('start')">Get started →</button>
+        <button class="card-cta" onclick="expandCard('start')" data-i18n="btn_get_started">Commencer →</button>
       </div>
 
       <!-- Join card -->
       <div class="action-card" id="card-join">
-        <span class="card-eyebrow">Join</span>
-        <h2 class="card-title">Join a session</h2>
-        <p class="card-sub">Someone sent you a code — enter it to share your location and vote</p>
+        <span class="card-eyebrow" data-i18n="card_join_eyebrow">Rejoindre</span>
+        <h2 class="card-title" data-i18n="card_join_title">Rejoindre une session</h2>
+        <p class="card-sub" data-i18n="card_join_sub">Quelqu'un vous a envoyé un code — entrez-le pour partager votre position et voter</p>
         <div class="card-form" id="form-join">
           <div class="form-group">
-            <label class="form-label" for="name-join">Your name</label>
-            <input type="text" id="name-join" placeholder="e.g. Sophie" maxlength="20"
+            <label class="form-label" for="name-join" data-i18n="label_join_name">Votre prénom</label>
+            <input type="text" id="name-join"
+              data-i18n-placeholder="ph_your_name" placeholder="ex. Sophie" maxlength="20"
               onkeydown="if(event.key==='Enter') joinSession()" />
           </div>
           <div class="form-group">
-            <label class="form-label" for="join-code-input">Session code</label>
-            <input type="text" id="join-code-input" placeholder="ABC123" maxlength="6"
+            <label class="form-label" for="join-code-input" data-i18n="label_session_code">Code de session</label>
+            <input type="text" id="join-code-input"
+              data-i18n-placeholder="ph_session_code" placeholder="ABC123" maxlength="6"
               oninput="this.value=this.value.toUpperCase()"
               onkeydown="if(event.key==='Enter') joinSession()" />
           </div>
-          <button class="btn primary" onclick="joinSession()">Join with a code →</button>
+          <button class="btn primary" onclick="joinSession()" data-i18n="btn_join_session">Rejoindre avec un code</button>
         </div>
-        <button class="card-cta" onclick="expandCard('join')">Enter code →</button>
+        <button class="card-cta" onclick="expandCard('join')" data-i18n="btn_enter_code">Entrer le code →</button>
       </div>
 
     </div>
 
-    <p class="welcome-note">
-      No account, no personal data, no location stored beyond the session.
-      We collect anonymous usage patterns to improve the experience — nothing that identifies you.
+    <p class="welcome-note" data-i18n="welcome_note">
+      Votre position n'est jamais obligatoire. Elle disparaît à la fin de la session.
     </p>
 
   </div>
@@ -125,10 +144,15 @@
   <div class="screen" id="screen-session">
 
     <header>
-      <span class="logo">Meet<span>Half</span></span>
+      <span class="logo">Ami<span>chemin</span></span>
       <span class="session-badge" id="header-code-badge"></span>
       <div class="spacer"></div>
-      <button class="btn sm" onclick="leaveSession()">Leave session</button>
+      <div class="lang-switcher">
+        <button class="lang-btn active" onclick="setLang('fr')" data-lang="fr">FR</button>
+        <span class="lang-sep">|</span>
+        <button class="lang-btn" onclick="setLang('en')" data-lang="en">EN</button>
+      </div>
+      <button class="btn sm" onclick="leaveSession()" data-i18n="btn_leave_session">Quitter</button>
     </header>
 
     <div class="main">
@@ -139,33 +163,34 @@
         <!-- Sheet handle (visible on mobile only) -->
         <div class="sheet-handle" onclick="togglePanel()">
           <div class="sheet-handle-bar"></div>
-          <span class="sheet-handle-label" id="sheet-summary">Tap to open</span>
+          <span class="sheet-handle-label" id="sheet-summary" data-i18n="sheet_tap">Appuyez pour ouvrir</span>
         </div>
 
         <!-- 0 · Session Code -->
         <div class="panel">
           <div class="panel-title">
-            <span class="num">Session code</span>
-            Share with friends
+            <span class="num" data-i18n="panel_code_title">Code de session</span>
+            <span data-i18n="panel_code_sub">Partagez avec vos amis</span>
           </div>
           <div class="code-display" id="code-display" onclick="copyCode()" title="Click to copy">
             ——
-            <span class="copy-hint">Click to copy</span>
+            <span class="copy-hint" data-i18n="copy_hint">Cliquer pour copier</span>
           </div>
           <div class="online-count-label">
-            <span id="online-count">0 users</span> connected
+            <span id="online-count">0</span>
           </div>
         </div>
 
         <!-- 1 · Your location -->
         <div class="panel panel--relative">
           <div class="panel-title">
-            <span class="num">Step 1</span>
-            Your location
+            <span class="num" data-i18n="step_1">Étape 1</span>
+            <span data-i18n="panel_location">Votre position</span>
           </div>
 
           <div class="addr-row">
-            <input type="text" id="addr-input" placeholder="Type an address…"
+            <input type="text" id="addr-input"
+              data-i18n-placeholder="ph_address" placeholder="Tapez une adresse…"
               autocomplete="off"
               oninput="onAddrInput(this.value)"
               onfocus="showSuggestions()"
@@ -186,39 +211,39 @@
                 <line x1="1" y1="8" x2="4" y2="8"/>
                 <line x1="12" y1="8" x2="15" y2="8"/>
               </svg>
-              Use GPS
+              <span data-i18n="btn_use_gps">GPS</span>
             </button>
             <button class="btn sm accent" id="confirm-loc-btn"
-              onclick="setMyLocation()" disabled>
-              Confirm location
+              onclick="setMyLocation()" disabled data-i18n="btn_confirm_location">
+              Confirmer
             </button>
           </div>
 
           <div id="loc-status" class="loc-status"></div>
-          <p class="pin-drop-hint">Or tap the map to drop a pin</p>
+          <p class="pin-drop-hint" data-i18n="pin_drop_hint">Ou tapez la carte pour épingler</p>
         </div>
 
         <!-- 2 · Participants -->
         <div class="panel">
           <div class="panel-title">
-            <span class="num">Step 2</span>
-            Participants
+            <span class="num" data-i18n="step_2">Étape 2</span>
+            <span data-i18n="panel_participants">Participants</span>
           </div>
           <div class="user-list" id="user-list">
-            <div class="empty-state">Waiting for participants…</div>
+            <div class="empty-state" data-i18n="empty_waiting">En attente de participants…</div>
           </div>
         </div>
 
         <!-- 3 · Find places -->
         <div class="panel">
           <div class="panel-title">
-            <span class="num">Step 3</span>
-            Find places
+            <span class="num" data-i18n="step_3">Étape 3</span>
+            <span data-i18n="panel_find_places">Trouver des lieux</span>
           </div>
           <div class="filters-row" id="filters-row"></div>
           <div class="radius-row">
             <label class="radius-label">
-              Search radius
+              <span data-i18n="search_radius">Rayon de recherche</span>
               <span id="radius-value">1.5 km</span>
             </label>
             <input type="range" id="radius-slider"
@@ -230,19 +255,19 @@
             </div>
           </div>
           <button class="btn primary full" id="search-btn"
-            onclick="searchPlaces()" disabled>
-            Find places nearby
+            onclick="searchPlaces()" disabled data-i18n="btn_find_places">
+            Trouver des lieux proches
           </button>
         </div>
 
         <!-- 4 · Vote / Result -->
         <div class="panel panel--flex" id="results-panel">
           <div class="panel-title">
-            <span class="num" id="results-panel-step">Step 4</span>
-            <span id="results-panel-heading">Vote for a place</span>
+            <span class="num" id="results-panel-step" data-i18n="step_4">Étape 4</span>
+            <span id="results-panel-heading" data-i18n="panel_vote">Votez pour un lieu</span>
           </div>
           <div id="place-list" class="place-list">
-            <div class="empty-state">Search for places to see results here.</div>
+            <div class="empty-state" data-i18n="empty_places">Cherchez des lieux pour voir les résultats ici.</div>
           </div>
           <div id="result-panel-content" style="display:none;"></div>
         </div>
@@ -254,7 +279,7 @@
         <div id="map"></div>
         <div class="loading-overlay" id="map-loading">
           <div class="spinner"></div>
-          Searching the neighbourhood…
+          <span data-i18n="loading_text">Recherche dans le quartier…</span>
         </div>
       </div>
 
@@ -267,7 +292,7 @@
 
     <div class="status-bar">
       <div class="pulse" id="pulse-dot"></div>
-      <span id="status-text">Connecting…</span>
+      <span id="status-text" data-i18n="status_connecting">Connexion…</span>
     </div>
 
   </div><!-- /screen-session -->
