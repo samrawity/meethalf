@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Amichemin</title>
+  <script>
+    // Path-based URLs are not supported — the app uses ?s=CODE query params.
+    // Redirect to the root, preserving any query string so links like
+    // /?s=ABC123 still work even if the host added a bogus path segment.
+    var qs = window.location.search;
+    window.location.replace('/' + qs);
+  </script>
+</head>
+<body></body>
+</html>
