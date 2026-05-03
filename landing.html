@@ -214,26 +214,23 @@
       top: 3rem;
       right: 3rem;
       z-index: 2;
+      width: 140px;
+      height: 140px;
     }
     .stamp {
-      width: 120px;
-      height: 120px;
-      border: 2px solid rgba(255,79,216,0.35);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      width: 140px;
+      height: 140px;
       animation: spin 18s linear infinite;
     }
     .stamp-text {
-      font-size: 9px;
+      font-size: 9.5px;
       font-weight: 800;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--accent);
-      text-anchor: middle;
+      letter-spacing: 0.18em;
+      fill: var(--accent);
+      font-family: var(--sans);
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .stamp-wrap:hover .stamp { animation-play-state: paused; }
 
     /* Hero tag */
     .hero-tag {
@@ -862,14 +859,12 @@
 
   <!-- Rotating stamp -->
   <div class="stamp-wrap" aria-hidden="true">
-    <div class="stamp">
-      <svg viewBox="0 0 120 120" width="120" height="120">
-        <path id="circle-path" d="M60,60 m-46,0 a46,46 0 1,1 92,0 a46,46 0 1,1 -92,0" fill="none"/>
-        <text class="stamp-text">
-          <textPath href="#circle-path" data-i18n="stamp_text">GRATUIT · SANS COMPTE · DONNÉES OUVERTES · TEMPS RÉEL ·</textPath>
-        </text>
-      </svg>
-    </div>
+    <svg class="stamp" viewBox="0 0 140 140" width="140" height="140">
+      <path id="stamp-circle-path" d="M70,70 m-54,0 a54,54 0 1,1 108,0 a54,54 0 1,1 -108,0" fill="none"/>
+      <text class="stamp-text">
+        <textPath href="#stamp-circle-path" startOffset="0%" data-i18n="stamp_text">GRATUIT · SANS COMPTE · DONNÉES OUVERTES · TEMPS RÉEL ·</textPath>
+      </text>
+    </svg>
   </div>
 
   <div class="hero-inner">
@@ -1161,7 +1156,7 @@ const LANDING_TRANSLATIONS = {
     nav_why:   'Pourquoi Amichemin',
     nav_cta:   'Essayer gratuitement →',
     // Hero
-    stamp_text:        'GRATUIT · SANS COMPTE · DONNÉES OUVERTES · TEMPS RÉEL ·',
+    stamp_text:        '· GRATUIT · ZERO COMPTE · OPEN DATA · TEMPS RÉEL ·',
     hero_eyebrow:      "L'appli de point de rencontre qui s'efface",
     hero_h1:           "L'endroit où tout le<br/>monde arrive<br/><em>à mi-</em><span class=\"heavy\">chemin.</span>",
     hero_sub:          "Arrêtez de débattre sur où se retrouver. Un code, une position, un vote. Réglé en 60 secondes — et tout le monde est content.",
@@ -1170,7 +1165,7 @@ const LANDING_TRANSLATIONS = {
     pill_1: 'Gratuit',
     pill_2: 'Sans compte',
     pill_3: 'Vote en temps réel',
-    pill_4: 'Données ouvertes',
+    pill_4: 'Open Source',
     pill_5: '60 secondes',
     // Ticker
     ticker_1: 'Partagez un code',
@@ -1254,7 +1249,7 @@ const LANDING_TRANSLATIONS = {
     nav_why:   'Why Amichemin',
     nav_cta:   'Try it free →',
     // Hero
-    stamp_text:        'FREE · NO ACCOUNT · OPEN DATA · REAL-TIME ·',
+    stamp_text:        'FREE USE · NO ACCOUNT · OPEN DATA · REAL-TIME ·',
     hero_eyebrow:      'The meeting point app that gets out of your way',
     hero_h1:           'Nobody should<br/>drive <em>further</em><br/>than the <span class="heavy">other guy.</span>',
     hero_sub:          'Stop the group chat debate. Share a code, drop your location, vote on a place. Done in 60 seconds.',
