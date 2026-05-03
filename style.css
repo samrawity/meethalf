@@ -534,16 +534,24 @@ input:focus, select:focus {
 .welcome-screen {
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100vh;
   min-height: 100dvh;
-  padding: 4rem 2rem;
+  padding: 0 2rem 4rem;
   gap: 0;
+}
+
+.welcome-screen header {
+  align-self: stretch;
+  margin-left: -2rem;
+  margin-right: -2rem;
+  padding: 1rem 2rem;
 }
 
 .welcome-hero {
   text-align: center;
   max-width: 640px;
+  margin-top: 4rem;
   margin-bottom: 3rem;
 }
 
@@ -989,8 +997,10 @@ input:focus, select:focus {
   .suggestion-item { padding: 14px; min-height: 44px; }
 
   /* Welcome screen */
-  .welcome-screen { padding: 2.5rem 1.2rem; justify-content: flex-start; }
-  .welcome-hero { text-align: left; margin-bottom: 2rem; }
+  .welcome-screen { padding: 0 1.2rem 2.5rem; }
+  .welcome-screen header { margin-left: -1.2rem; margin-right: -1.2rem; gap: 0.5rem; padding: 0.75rem 1.2rem; }
+  .logo { font-size: 1.15rem; }
+  .welcome-hero { text-align: left; margin-top: 2rem; margin-bottom: 2rem; }
   .tagline-pills { justify-content: flex-start; }
   .welcome-cards { grid-template-columns: 1fr; }
   .hero-title { font-size: 2.6rem; }
@@ -1105,6 +1115,8 @@ input:focus, select:focus {
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 3px 10px;
+  padding-left: 2rem;
+  padding-right: 2rem;
 }
 
 .lang-btn {
