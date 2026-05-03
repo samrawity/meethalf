@@ -638,6 +638,9 @@ function leaveSession() {
   if (midpointMarker) { midpointMarker.remove(); midpointMarker = null; }
   if (radiusCircle)   { radiusCircle.remove();   radiusCircle = null; }
 
+  const badge = document.getElementById('header-code-badge');
+  if (badge) { badge.textContent = ''; badge.style.display = 'none'; }
+
   document.getElementById('screen-session').classList.remove('active');
   document.getElementById('screen-welcome').classList.add('active');
   document.getElementById('addr-input').value = '';
